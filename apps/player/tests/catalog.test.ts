@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildCatalog, filterChannels, isCatalog, loadCachedCatalog, safeMediaUrl } from '../src/catalog.ts';
+import { buildCatalog, filterChannels, isCatalog, loadCachedCatalog, safeMediaUrl, loadCatalog } from '../src/catalog.ts';
 
 const metadata = [
   { id: 'Alpha.hr', name: 'Alpha TV', country: 'HR', categories: ['news'], is_nsfw: false },
@@ -80,5 +80,28 @@ test('loads only a validated nonempty bundled catalog without requiring a remote
     assert.equal(await loadCachedCatalog(), null);
   } finally {
     globalThis.fetch = original;
+  }
+});
+
+test('live catalog still refreshes when newer AbortSignal helpers are unavailable on TV', async () => {
+  const oldFetch = globalThis.fetch;
+  const any = Object.getOwnPropertyDescriptor(AbortSignal, 'any');
+  const timeout = Object.getOwnPropertyDescriptor(AbortSignal, 'timeout');
+  try {
+    Object.defineProperty(AbortSignal, 'any', { configurable: true, value: undefined });
+    Object.defineProperty(AbortSignal, 'timeout', { configurable: true, value: undefined });
+    globalThis.fetch = async (resource: RequestInfo | URL) => {
+      const url = String(resource);
+      const value = url.endsWith('/channels.json') ? metadata :
+        url.endsWith('/streams.json') ? streams : [];
+      return Response.json(value);
+    };
+    const result = await loadCatalog();
+    assert.equal(result.catalog.channels.length, 1);
+    assert.equal(result.isFallback, false);
+  } finally {
+    globalThis.fetch = oldFetch;
+    if (any) Object.defineProperty(AbortSignal, 'any', any);
+    if (timeout) Object.defineProperty(AbortSignal, 'timeout', timeout);
   }
 });
