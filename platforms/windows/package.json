@@ -1,0 +1,60 @@
+{
+  "name": "@brendigo/iptv-windows",
+  "version": "0.4.0",
+  "private": true,
+  "description": "IPTV desktop player for Windows 10 and Windows 11",
+  "main": "main.cjs",
+  "scripts": {
+    "build:win": "electron-builder --win nsis portable --x64",
+    "smoke": "electron . --smoke-test"
+  },
+  "devDependencies": {
+    "electron": "^38.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "com.brendigo.iptv.windows",
+    "productName": "IPTV",
+    "copyright": "Copyright Brendigo",
+    "asar": true,
+    "files": [
+      "main.cjs",
+      "dist/**/*",
+      "assets/icon.ico",
+      "assets/icon.png",
+      "package.json"
+    ],
+    "directories": {
+      "output": "outputs"
+    },
+    "win": {
+      "icon": "assets/icon.ico",
+      "executableName": "IPTV",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "IPTV",
+      "artifactName": "IPTV-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "IPTV-Portable-${version}.${ext}"
+    }
+  }
+}
