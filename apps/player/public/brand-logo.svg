@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="148" viewBox="0 0 520 148" fill="none" role="img" aria-label="IPTV">
+<defs><linearGradient id="a" x1="0" y1="20" x2="120" y2="132" gradientUnits="userSpaceOnUse"><stop stop-color="#65D8FF"/><stop offset="1" stop-color="#1956F1"/></linearGradient></defs>
+<g transform="translate(4 4) scale(.56)"><path d="M111 64 80 32M145 64l31-32" stroke="url(#a)" stroke-width="12" stroke-linecap="round"/><circle cx="78" cy="30" r="9" fill="#61D4FF"/><circle cx="178" cy="30" r="9" fill="#61D4FF"/><rect x="28" y="65" width="200" height="154" rx="40" stroke="url(#a)" stroke-width="23"/><path d="M107 103c-6-4-14 1-14 8v69c0 7 8 12 14 8l65-35c6-3 6-12 0-15l-65-35Z" fill="#F8FAFC"/></g>
+<text x="150" y="108" fill="#F8FAFC" font-family="Arial,Helvetica,sans-serif" font-size="101" font-weight="900" letter-spacing="-7">IPTV</text>
+</svg>
