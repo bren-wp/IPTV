@@ -1,9 +1,17 @@
 {
-  "name": "IPTV — Live TV",
+  "name": "IPTV — One App. Every Screen.",
   "short_name": "IPTV",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#080d18",
-  "theme_color": "#080d18",
-  "description": "Public live television channels from around the world."
+  "background_color": "#070d1a",
+  "theme_color": "#070d1a",
+  "description": "Live TV, beautifully organized.",
+  "icons": [
+    {
+      "src": "./brand-symbol.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }
