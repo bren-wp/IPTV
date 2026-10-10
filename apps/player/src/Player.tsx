@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import Hls from 'hls.js';
 import type { Stream } from './catalog';
 
 interface Props {
@@ -17,7 +16,8 @@ export default function Player({ stream, channelName, onNextStream, hasNextStrea
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    let hls: Hls | null = null;
+    let stopped = false;
+    let hls: import('hls.js').default | null = null;
     setError('');
     setNotice('');
     video.pause();
@@ -26,25 +26,47 @@ export default function Player({ stream, channelName, onNextStream, hasNextStrea
     const path = new URL(stream.url).pathname.toLowerCase();
     const isHls = path.endsWith('.m3u8');
     const isDash = path.endsWith('.mpd');
-    if (isDash) {
-      setError('DASH playback is not supported by this player yet. Try another available stream.');
-    } else if (isHls && video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = stream.url;
-    } else if (isHls && Hls.isSupported()) {
-      hls = new Hls({ lowLatencyMode: false, maxBufferLength: 30, backBufferLength: 30 });
-      hls.on(Hls.Events.ERROR, (_event, data) => {
-        if (data.fatal) setError('This HLS stream could not be played. It may be offline or blocked in your region.');
-      });
-      hls.loadSource(stream.url);
-      hls.attachMedia(video);
-    } else {
-      video.src = stream.url;
+
+    async function attach(): Promise<void> {
+      if (isDash) {
+        setError('DASH playback is not supported by this player yet. Try another available stream.');
+        return;
+      }
+      if (isHls && !video.canPlayType('application/vnd.apple.mpegurl')) {
+        // Load the comparatively large playback engine only for a selected HLS stream.
+        const { default: Hls } = await import('hls.js');
+        if (stopped) return;
+        if (!Hls.isSupported()) {
+          setError('This device does not support HLS playback. Try another source.');
+          return;
+        }
+        const instance = new Hls({ lowLatencyMode: false, maxBufferLength: 30, backBufferLength: 30 });
+        hls = instance;
+        instance.on(Hls.Events.ERROR, (_event, data) => {
+          if (!stopped && data.fatal) {
+            setError('This HLS stream could not be played. It may be offline or blocked in your region.');
+          }
+        });
+        instance.loadSource(stream.url);
+        instance.attachMedia(video);
+        // HLS.js will attach the media asynchronously.
+        instance.once(Hls.Events.MANIFEST_PARSED, () => {
+          if (!stopped) void video.play().catch(() => {
+            if (!stopped) setNotice('Select Play on the video to start watching.');
+          });
+        });
+      } else {
+        video.src = stream.url;
+        void video.play().catch(() => {
+          if (!stopped) setNotice('Select Play on the video to start watching.');
+        });
+      }
     }
-    if (!isDash) {
-      // A user click initiated selection, but browsers may still require a second play gesture.
-      void video.play().catch(() => setNotice('Select Play on the video to start watching.'));
-    }
+    void attach().catch(() => {
+      if (!stopped) setError('Playback engine could not initialize. Try another source.');
+    });
     return () => {
+      stopped = true;
       video.pause();
       hls?.destroy();
       video.removeAttribute('src');
