@@ -1,7 +1,9 @@
 <div align="center">
 
-# IPTV
-### Your world of live television. One beautiful experience.
+<img src="apps/player/public/brand-logo.svg" alt="IPTV" width="300" />
+
+# One App. Every Screen.
+### Live TV, beautifully organized.
 
 **Live channels · Worldwide discovery · TV guide · Personal favorites**
 
@@ -27,6 +29,14 @@ Designed for a wide range of screens, from your phone to your living-room TV.
 | Explore channels across countries and genres | Live HLS video with source selection | Build your favorites collection |
 | Search instantly by channel name | View programme schedules when available | Keep preferences on your device |
 | Filter by region and category | Navigate with touch, keyboard or remote focus | Refresh the channel directory automatically |
+
+### Designed for every screen
+
+The same premium blue-on-navy design now powers all six platform packages. It includes a cinematic Home screen, accessible channel cards, category navigation, on-demand TV guide, a responsive mobile tab bar and TV remote/keyboard focus states.
+
+![IPTV brand icon](apps/player/public/brand-symbol.svg)
+
+The channel tiles reflect actual live streams and their metadata. Movies and Series identify television-channel categories, not a fictitious on-demand movie library. The [design system](docs/UI_BRAND_GUIDE.md) documents color tokens, navigation, focus styles and remaining device-level QA.
 
 ### Thoughtful by design
 
