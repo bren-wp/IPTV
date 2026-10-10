@@ -1,7 +1,7 @@
 {
   "name": "@brendigo/iptv-player",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
@@ -12,15 +12,11 @@
     "sync:catalog": "tsx scripts/sync-catalog.ts"
   },
   "dependencies": {
-    "@capacitor/core": "^7.4.0",
     "hls.js": "^1.6.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
-    "@capacitor/android": "^7.4.0",
-    "@capacitor/cli": "^7.4.0",
-    "@capacitor/ios": "^7.4.0",
     "@types/node": "^22.15.0",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
