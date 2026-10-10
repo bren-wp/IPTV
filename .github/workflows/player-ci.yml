@@ -56,6 +56,12 @@ jobs:
       - name: Unit tests
         working-directory: apps/player
         run: npm test
+      - name: Install Chromium for UI smoke tests
+        working-directory: apps/player
+        run: npx playwright install --with-deps chromium
+      - name: Browser interaction tests (desktop and mobile)
+        working-directory: apps/player
+        run: npm run test:e2e
       - name: Build shared player
         working-directory: apps/player
         run: npm run build
