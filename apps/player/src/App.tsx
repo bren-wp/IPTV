@@ -228,9 +228,9 @@ export default function App(){
       </div>
     </header>
     <div className="layout">
-      <aside className="sidebar" aria-label="All sections">
+      <aside className="sidebar" aria-label="Sidebar">
         <span className="nav-caption">DISCOVER</span>
-        <nav className="side-nav">
+        <nav className="side-nav" aria-label="All sections">
           {SIDE_VIEWS.map(item=><button key={item} type="button" className={'side-link'+(view===item?' is-active':'')} aria-current={view===item?'page':undefined} onClick={()=>switchView(item)}>
             <Icon name={viewIcons[item]}/><span>{VIEW_LABELS[item]}</span>{item==='favorites'&&<small>{favoritesCount}</small>}
           </button>)}
