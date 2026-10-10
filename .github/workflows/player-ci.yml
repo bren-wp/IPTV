@@ -250,7 +250,7 @@ jobs:
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build-ios \
-            CODE_SIGNING_ALLOWED=NO build
+            MARKETING_VERSION=0.4.0 CURRENT_PROJECT_VERSION=4 CODE_SIGNING_ALLOWED=NO build
       - uses: actions/upload-artifact@v4
         with:
           name: iptv-ios-simulator-app
@@ -324,7 +324,15 @@ jobs:
           test -n "$(find artifacts/iptv-ios-simulator-app -type f -name Info.plist -print -quit)"
           (cd artifacts/iptv-web && zip -qr "$GITHUB_WORKSPACE/release/IPTV-v0.4.0-Web.zip" .)
           (cd artifacts/iptv-samsung-tizen-staging && zip -qr "$GITHUB_WORKSPACE/release/IPTV-v0.4.0-Samsung-Tizen-STAGING.zip" .)
-          (cd artifacts/iptv-ios-simulator-app && zip -qr "$GITHUB_WORKSPACE/release/IPTV-v0.4.0-iOS-Simulator-UNSIGNED.zip" .)
+          mkdir -p ios-simulator-package
+          if [ -d artifacts/iptv-ios-simulator-app/App.app ]; then
+            cp -a artifacts/iptv-ios-simulator-app/App.app ios-simulator-package/
+          else
+            mkdir -p ios-simulator-package/App.app
+            cp -a artifacts/iptv-ios-simulator-app/. ios-simulator-package/App.app/
+          fi
+          test -s ios-simulator-package/App.app/Info.plist
+          (cd ios-simulator-package && zip -qr "$GITHUB_WORKSPACE/release/IPTV-v0.4.0-iOS-Simulator-UNSIGNED.zip" App.app)
           for archive in release/*.apk release/*.aab release/*.zip; do
             unzip -tq "$archive" >/dev/null
           done
