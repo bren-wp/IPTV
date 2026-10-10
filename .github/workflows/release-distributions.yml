@@ -11,6 +11,7 @@ on:
           - android
           - android-tv
           - ios
+          - samsung-tizen
 
 permissions:
   contents: read
@@ -193,5 +194,47 @@ jobs:
         with:
           name: iptv-ios-signed-ipa
           path: ${{ runner.temp }}/iptv-ipa/*.ipa
+          if-no-files-found: error
+          retention-days: 7
+
+  samsung_tizen:
+    if: ${{ inputs.target == 'samsung-tizen' }}
+    # Samsung Tizen Studio and a valid TV certificate profile must be installed on this protected runner.
+    runs-on: [self-hosted, linux, tizen]
+    timeout-minutes: 35
+    environment: production
+    env:
+      TIZEN_CERTIFICATE_PROFILE: ${{ secrets.TIZEN_CERTIFICATE_PROFILE }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate Samsung signing prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$TIZEN_CERTIFICATE_PROFILE" || { echo "::error::Missing TIZEN_CERTIFICATE_PROFILE"; exit 1; }
+          command -v tizen >/dev/null || { echo "::error::Tizen Studio CLI is required on this runner."; exit 1; }
+      - name: Build TV widget
+        run: |
+          npm install --prefix apps/player --no-audit --no-fund
+          npm --prefix apps/player run typecheck
+          npm --prefix apps/player test
+          npm --prefix apps/player run build
+          node scripts/prepare-platform.mjs samsung-tizen
+          node scripts/generate-app-icons.mjs samsung-tizen
+          node scripts/verify-release-assets.mjs samsung-tizen
+      - name: Sign and package Samsung TV WGT
+        shell: bash
+        run: |
+          set -euo pipefail
+          tizen build-web -- platforms/samsung-tizen/staging
+          tizen package -t wgt -s "$TIZEN_CERTIFICATE_PROFILE" -- platforms/samsung-tizen/staging/.buildResult
+          test -n "$(find platforms/samsung-tizen/staging/.buildResult -name '*.wgt' -size +0c -print -quit)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iptv-samsung-tizen-signed-wgt
+          path: platforms/samsung-tizen/staging/.buildResult/*.wgt
           if-no-files-found: error
           retention-days: 7
