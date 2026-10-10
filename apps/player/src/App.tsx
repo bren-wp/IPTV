@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Channel, Catalog } from './catalog';
-import { filterChannels, loadCatalog } from './catalog';
+import { filterChannels, loadCachedCatalog, loadCatalog } from './catalog';
 import Player from './Player';
 import EpgGuide from './EpgGuide';
 
@@ -93,7 +93,18 @@ export default function App() {
 
   useEffect(() => {
     const controller = new AbortController();
-    void refresh(controller.signal);
+    // Display the last verified bundled directory immediately, then refresh it from the network.
+    void (async () => {
+      try {
+        const cached = await loadCachedCatalog(controller.signal);
+        if (cached && !controller.signal.aborted) {
+          setCatalog(cached);
+          setIsFallback(true);
+          setLoading(false);
+        }
+      } catch { /* Mount teardown; the pending network request is cancelled below. */ }
+      if (!controller.signal.aborted) await refresh(controller.signal);
+    })();
     const interval = setInterval(() => {
       if (document.visibilityState === 'visible') void refresh(controller.signal);
     }, REFRESH_MS);
