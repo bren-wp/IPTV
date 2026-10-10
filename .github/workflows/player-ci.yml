@@ -259,7 +259,7 @@ jobs:
 
   publish_preview:
     name: Publish v0.4.0 GitHub Preview Release
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    if: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
     needs: [web, android, android_tv, ios]
     runs-on: ubuntu-latest
     timeout-minutes: 12
@@ -279,7 +279,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           if gh release view v0.4.0 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "Release v0.4.0 already exists. Not overwriting release binaries."
+            existing_count="$(gh release view v0.4.0 --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets | length')"
+            if [ "$existing_count" -ne 9 ]; then
+              echo "::error::Version v0.4.0 exists but has $existing_count assets, not 9. Manual review required."
+              exit 1
+            fi
+            echo "Release v0.4.0 already contains all nine files. Skipping duplicate upload."
             echo "present=true" >> "$GITHUB_OUTPUT"
           else
             echo "present=false" >> "$GITHUB_OUTPUT"
