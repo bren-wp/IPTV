@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" id="https://brendigo.com/iptv/tv" version="0.2.0" viewmodes="fullscreen">
+<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" id="https://brendigo.com/iptv/tv" version="0.2.0" viewmodes="maximized">
   <name>IPTV</name>
   <content src="index.html"/>
   <description>Browse publicly available live television channels.</description>
   <tizen:application id="BrendigoTV.IPTV" package="BrendigoTV" required_version="5.5"/>
-  <tizen:profile name="tv"/>
+  <access origin="*" subdomains="true"/>
+  <tizen:privilege name="http://tizen.org/privilege/internet"/>
+  <tizen:profile name="tv-samsung"/>
   <tizen:setting screen-orientation="landscape" context-menu="disable" background-support="disable" encryption="disable" install-location="auto"/>
 </widget>
