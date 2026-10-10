@@ -5,9 +5,9 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const target = process.argv[2];
-const allowed = new Set(['web', 'ios', 'android', 'android-tv', 'lg-webos', 'samsung-tizen']);
+const allowed = new Set(['web', 'ios', 'android', 'android-tv', 'lg-webos', 'samsung-tizen', 'windows']);
 if (!allowed.has(target)) {
-  console.error('Usage: node scripts/generate-app-icons.mjs [web|ios|android|android-tv|lg-webos|samsung-tizen]');
+  console.error('Usage: node scripts/generate-app-icons.mjs [web|ios|android|android-tv|lg-webos|samsung-tizen|windows]');
   process.exit(2);
 }
 
@@ -88,6 +88,20 @@ if (target === 'lg-webos') {
   await put(join(root, 'platforms/samsung-tizen/staging/icon.png'), 117);
 } else if (target === 'web') {
   await put(join(root, 'platforms/web/dist/icon.png'), 192);
+} else if (target === 'windows') {
+  const dir = join(root, 'platforms/windows/assets');
+  await put(join(dir, 'icon.png'), 256);
+  // Windows ICO container with an embedded PNG image (supported by Windows 10/11).
+  const pngData = image(256);
+  const header = Buffer.alloc(22);
+  header.writeUInt16LE(1, 2);   // Type = icon
+  header.writeUInt16LE(1, 4);   // One image
+  header[6] = 0; header[7] = 0; // 256 x 256
+  header.writeUInt16LE(1, 10);
+  header.writeUInt16LE(32, 12);
+  header.writeUInt32LE(pngData.length, 14);
+  header.writeUInt32LE(22, 18);
+  await writeFile(join(dir, 'icon.ico'), Buffer.concat([header, pngData]));
 } else if (target === 'ios') {
   const dir = join(root, 'platforms/ios/ios/App/App/Assets.xcassets/AppIcon.appiconset');
   await put(join(dir, 'AppIcon-512@2x.png'), 1024);
