@@ -3,6 +3,13 @@ name: IPTV Catalog Sync
 on:
   schedule:
     - cron: '19 */6 * * *'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/player/scripts/sync-catalog.ts'
+      - 'apps/player/src/catalog.ts'
+      - 'apps/player/package.json'
+      - '.github/workflows/catalog-sync.yml'
   workflow_dispatch:
 
 permissions:
