@@ -5,6 +5,7 @@ import { newestCatalog, readStoredCatalog, saveStoredCatalog } from './catalog-s
 import { channelsForView, formatChannelCount, recommendedChannels, VIEW_LABELS } from './navigation';
 import type { View } from './navigation';
 import Player from './Player';
+import { nextStreamIndex } from './stream-recovery';
 import EpgGuide from './EpgGuide';
 
 const REFRESH_MS = 15 * 60 * 1000; // Check for new playlist metadata each quarter-hour.
@@ -131,6 +132,7 @@ export default function App(){
   const [guideOpen,setGuideOpen]=useState(false);
   const [page,setPage]=useState(1);
   const playerRef=useRef<HTMLElement|null>(null);
+  const failedStreamUrlsRef=useRef<Set<string>>(new Set());
   const inFlightRef=useRef(false);
   const lastAttemptRef=useRef(0);
 
@@ -213,11 +215,24 @@ export default function App(){
     window.scrollTo({top:0,behavior:'smooth'});
   }
   function playChannel(ch:Channel,showGuide=false):void {
+    failedStreamUrlsRef.current=new Set();
     setSelectedId(ch.id);setStreamIndex(0);setGuideOpen(showGuide);
     setRecent(old=>{
       const next=[ch.id,...old.filter(id=>id!==ch.id)].slice(0,24);
       persist(RECENT_KEY,JSON.stringify(next));return next;
     });
+  }
+  function autoNextStream():boolean {
+    if(!selected||!stream)return false;
+    failedStreamUrlsRef.current.add(stream.url);
+    const next=nextStreamIndex(selected.streams,streamIndex,failedStreamUrlsRef.current);
+    if(next===null)return false;
+    setStreamIndex(next);
+    return true;
+  }
+  function manuallySelectStream(next:number):void {
+    failedStreamUrlsRef.current=new Set();
+    setStreamIndex(next);
   }
   function toggleFavorite(id:string):void {
     setFavorites(old=>{
@@ -273,13 +288,15 @@ export default function App(){
           <div className="player-heading"><div><span className="kicker">NOW WATCHING</span><h2>{selected.name}</h2></div>
             <button className="outline-button" type="button" onClick={()=>{setSelectedId(null);setGuideOpen(false);}}><Icon name="close" size={16}/> Close</button></div>
           <Player stream={stream} key={selected.id+':'+streamIndex} channelName={selected.name}
-            hasNextStream={selected.streams.length>1} onNextStream={()=>setStreamIndex(i=>(i+1)%selected.streams.length)}/>
+            hasNextStream={selected.streams.length>1}
+            onAutoNext={autoNextStream}
+            onNextStream={()=>manuallySelectStream((streamIndex+1)%selected.streams.length)}/>
           <div className="player-options">
             <span>{countryName(selected.country)} · {selected.categories.join(', ')||'Live TV'}</span>
             <div className="player-options-actions">
               <button type="button" className="outline-button" aria-expanded={guideOpen} onClick={()=>setGuideOpen(o=>!o)}><Icon name="guide" size={16}/>{guideOpen?'Hide schedule':'TV guide'}</button>
               <button type="button" className="outline-button" aria-pressed={favorites.has(selected.id)} onClick={()=>toggleFavorite(selected.id)}><Icon name="heart" size={16}/>{favorites.has(selected.id)?'Saved':'Add to My List'}</button>
-              {selected.streams.length>1&&<label className="source-select">Source <select value={streamIndex} onChange={e=>setStreamIndex(Number(e.target.value))}>{selected.streams.map((s,i)=><option key={s.url} value={i}>{s.quality??'Stream'} {i+1} · {s.title}</option>)}</select></label>}
+              {selected.streams.length>1&&<label className="source-select">Source <select value={streamIndex} onChange={e=>manuallySelectStream(Number(e.target.value))}>{selected.streams.map((s,i)=><option key={s.url} value={i}>{s.quality??'Stream'} {i+1} · {s.title}</option>)}</select></label>}
             </div>
           </div>
           {guideOpen&&<EpgGuide channel={selected}/>}
