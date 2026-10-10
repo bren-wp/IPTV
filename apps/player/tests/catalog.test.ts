@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildCatalog, filterChannels, isCatalog, safeMediaUrl } from '../src/catalog.ts';
+import { buildCatalog, filterChannels, isCatalog, loadCachedCatalog, safeMediaUrl } from '../src/catalog.ts';
 
 const metadata = [
   { id: 'Alpha.hr', name: 'Alpha TV', country: 'HR', categories: ['news'], is_nsfw: false },
@@ -63,4 +63,22 @@ test('rejects internal, reserved and private hostnames to prevent requests into 
     assert.equal(safeMediaUrl(url), null, url);
   }
   assert.equal(safeMediaUrl('https://8.8.8.8/video.m3u8'), 'https://8.8.8.8/video.m3u8');
+});
+
+test('loads only a validated nonempty bundled catalog without requiring a remote API call', async () => {
+  const original = globalThis.fetch;
+  try {
+    const valid = buildCatalog(metadata, streams, []);
+    globalThis.fetch = async (input: RequestInfo | URL) => {
+      assert.equal(String(input), './catalog.json');
+      return Response.json(valid);
+    };
+    const value = await loadCachedCatalog();
+    assert.equal(value?.channels[0].id, 'Alpha.hr');
+
+    globalThis.fetch = async () => Response.json({version: 1, updatedAt: null, channels: []});
+    assert.equal(await loadCachedCatalog(), null);
+  } finally {
+    globalThis.fetch = original;
+  }
 });
