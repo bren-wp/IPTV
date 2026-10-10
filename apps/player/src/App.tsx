@@ -39,7 +39,6 @@ function Icon({name,size=20}: {name:IconName;size?:number}) {
 const PRIMARY_VIEWS: View[] = ['home','live','movies','series','sports','news'];
 const SIDE_VIEWS: View[] = ['home','live','guide','movies','series','sports','kids','news','favorites','settings'];
 const viewIcons: Record<View,IconName> = {home:'home',live:'tv',movies:'film',series:'series',sports:'sports',news:'news',kids:'kids',guide:'guide',favorites:'heart',settings:'settings'};
-const tagline = 'Live TV, beautifully organized.';
 
 function fromStorage(key:string, fallback:string):string {
   try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; }
