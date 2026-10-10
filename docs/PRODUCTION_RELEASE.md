@@ -49,7 +49,9 @@ The CI now generates the required 80×80 and 130×130 launcher icons and an `.ip
 
 ### Samsung Tizen
 
-The CI creates the Samsung TV-specific web widget staging directory and 117×117 icon. A signed `.wgt` requires Tizen Studio, a Samsung TV certificate profile, the publisher's package identity and access to a supported build system. With the proper local credentials, use:
+The CI creates the Samsung TV-specific web widget staging directory and 117×117 icon. A signed `.wgt` requires Tizen Studio, a Samsung TV certificate profile, the publisher's package identity and access to a supported build system. A manual signed workflow also supports **samsung-tizen** when a protected **self-hosted Linux runner labeled `tizen`** has Tizen Studio configured. Store the signing profile name as `TIZEN_CERTIFICATE_PROFILE` in the `production` environment. A runner, certificate and publisher account are not supplied by this repository.
+
+With the proper local credentials, use:
 
 ```bash
 tizen build-web -- platforms/samsung-tizen/staging
