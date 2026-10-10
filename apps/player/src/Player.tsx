@@ -16,13 +16,15 @@ export default function Player({ stream, channelName, onNextStream, hasNextStrea
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
+    // Capture the narrowed element for use inside the async setup callback.
+    const readyVideo: HTMLVideoElement = video;
     let stopped = false;
     let hls: import('hls.js').default | null = null;
     setError('');
     setNotice('');
-    video.pause();
-    video.removeAttribute('src');
-    video.load();
+    readyVideo.pause();
+    readyVideo.removeAttribute('src');
+    readyVideo.load();
     const path = new URL(stream.url).pathname.toLowerCase();
     const isHls = path.endsWith('.m3u8');
     const isDash = path.endsWith('.mpd');
@@ -32,7 +34,7 @@ export default function Player({ stream, channelName, onNextStream, hasNextStrea
         setError('DASH playback is not supported by this player yet. Try another available stream.');
         return;
       }
-      if (isHls && !video.canPlayType('application/vnd.apple.mpegurl')) {
+      if (isHls && !readyVideo.canPlayType('application/vnd.apple.mpegurl')) {
         // Load the comparatively large playback engine only for a selected HLS stream.
         const { default: Hls } = await import('hls.js');
         if (stopped) return;
@@ -48,16 +50,16 @@ export default function Player({ stream, channelName, onNextStream, hasNextStrea
           }
         });
         instance.loadSource(stream.url);
-        instance.attachMedia(video);
+        instance.attachMedia(readyVideo);
         // HLS.js will attach the media asynchronously.
         instance.once(Hls.Events.MANIFEST_PARSED, () => {
-          if (!stopped) void video.play().catch(() => {
+          if (!stopped) void readyVideo.play().catch(() => {
             if (!stopped) setNotice('Select Play on the video to start watching.');
           });
         });
       } else {
-        video.src = stream.url;
-        void video.play().catch(() => {
+        readyVideo.src = stream.url;
+        void readyVideo.play().catch(() => {
           if (!stopped) setNotice('Select Play on the video to start watching.');
         });
       }
@@ -67,10 +69,10 @@ export default function Player({ stream, channelName, onNextStream, hasNextStrea
     });
     return () => {
       stopped = true;
-      video.pause();
+      readyVideo.pause();
       hls?.destroy();
-      video.removeAttribute('src');
-      video.load();
+      readyVideo.removeAttribute('src');
+      readyVideo.load();
     };
   }, [stream.url]);
 
