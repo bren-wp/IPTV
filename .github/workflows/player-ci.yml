@@ -1,4 +1,4 @@
-name: IPTV Player CI
+name: IPTV Platform CI
 
 on:
   push:
@@ -6,11 +6,17 @@ on:
     paths:
       - 'apps/player/**'
       - '!apps/player/public/catalog.json'
+      - 'platforms/**'
+      - 'scripts/prepare-platform.mjs'
+      - 'scripts/patch-android-tv.mjs'
       - '.github/workflows/player-ci.yml'
   pull_request:
     paths:
       - 'apps/player/**'
       - '!apps/player/public/catalog.json'
+      - 'platforms/**'
+      - 'scripts/prepare-platform.mjs'
+      - 'scripts/patch-android-tv.mjs'
       - '.github/workflows/player-ci.yml'
   workflow_dispatch:
 
@@ -19,38 +25,55 @@ permissions:
 
 jobs:
   web:
-    name: Typecheck, tests and web build
+    name: Shared tests + Web/Tizen/webOS bundles
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/player
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Install dependencies
+      - name: Install player dependencies
+        working-directory: apps/player
         run: npm install --no-audit --no-fund
       - name: Typecheck
+        working-directory: apps/player
         run: npm run typecheck
       - name: Unit tests
+        working-directory: apps/player
         run: npm test
-      - name: Build website
+      - name: Build shared player
+        working-directory: apps/player
         run: npm run build
-      - name: Upload web build
-        uses: actions/upload-artifact@v4
+      - name: Prepare separate web and Smart TV bundles
+        run: node scripts/prepare-platform.mjs web samsung-tizen lg-webos
+      - name: Verify static distribution structure
+        run: |
+          test -s platforms/web/dist/index.html
+          test -s platforms/samsung-tizen/staging/index.html
+          test -s platforms/samsung-tizen/staging/config.xml
+          test -s platforms/lg-webos/staging/index.html
+          test -s platforms/lg-webos/staging/appinfo.json
+          python3 -c 'import json,xml.etree.ElementTree as ET; a=json.load(open("platforms/lg-webos/staging/appinfo.json")); assert a["type"]=="web" and a["main"]=="index.html"; root=ET.parse("platforms/samsung-tizen/staging/config.xml").getroot(); assert root.tag.endswith("widget")'
+      - uses: actions/upload-artifact@v4
         with:
           name: iptv-web
-          path: apps/player/dist/
+          path: platforms/web/dist/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iptv-samsung-tizen-staging
+          path: platforms/samsung-tizen/staging/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iptv-lg-webos-staging
+          path: platforms/lg-webos/staging/
           if-no-files-found: error
 
   android:
-    name: Android debug APK
+    name: Android mobile debug APK
     runs-on: ubuntu-latest
     needs: web
-    defaults:
-      run:
-        working-directory: apps/player
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -66,45 +89,95 @@ jobs:
           SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
           test -n "$SDKMANAGER"
           "$SDKMANAGER" --install "platform-tools" "platforms;android-35" "build-tools;35.0.0"
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
-      - name: Build web assets
-        run: npm run build
-      - name: Generate Android project
-        run: npx cap add android
-      - name: Synchronize Android assets
-        run: npx cap sync android
-      - name: Assemble debug APK
+      - name: Install player + mobile dependencies
+        run: |
+          npm install --prefix apps/player --no-audit --no-fund
+          npm install --prefix platforms/android --no-audit --no-fund
+      - name: Build and prepare Android mobile assets
+        run: |
+          npm --prefix apps/player run build
+          node scripts/prepare-platform.mjs android
+      - name: Generate Android mobile project
+        working-directory: platforms/android
+        run: |
+          npx cap add android
+          npx cap sync android
+      - name: Assemble Android debug APK
+        working-directory: platforms/android/android
         run: ./gradlew assembleDebug --no-daemon
-        working-directory: apps/player/android
-      - name: Upload Android test APK
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: iptv-android-debug-apk
-          path: apps/player/android/app/build/outputs/apk/debug/app-debug.apk
+          path: platforms/android/android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
-  ios:
-    name: iOS simulator build (no signing)
-    runs-on: macos-15
+  android_tv:
+    name: Android TV debug APK
+    runs-on: ubuntu-latest
     needs: web
-    defaults:
-      run:
-        working-directory: apps/player
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
-      - name: Build web assets
-        run: npm run build
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Prepare Android SDK
+        shell: bash
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
+          test -n "$SDKMANAGER"
+          "$SDKMANAGER" --install "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+      - name: Install player + TV dependencies
+        run: |
+          npm install --prefix apps/player --no-audit --no-fund
+          npm install --prefix platforms/android-tv --no-audit --no-fund
+      - name: Build and prepare Android TV assets
+        run: |
+          npm --prefix apps/player run build
+          node scripts/prepare-platform.mjs android-tv
+      - name: Generate Android TV project
+        working-directory: platforms/android-tv
+        run: |
+          npx cap add android
+          npx cap sync android
+      - name: Add TV launcher and Leanback support
+        run: node scripts/patch-android-tv.mjs
+      - name: Assemble Android TV debug APK
+        working-directory: platforms/android-tv/android
+        run: ./gradlew assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iptv-android-tv-debug-apk
+          path: platforms/android-tv/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+  ios:
+    name: iOS Simulator app (unsigned)
+    runs-on: macos-15
+    needs: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install player + iOS dependencies
+        run: |
+          npm install --prefix apps/player --no-audit --no-fund
+          npm install --prefix platforms/ios --no-audit --no-fund
+      - name: Build and prepare iOS assets
+        run: |
+          npm --prefix apps/player run build
+          node scripts/prepare-platform.mjs ios
       - name: Generate iOS project
-        run: npx cap add ios
-      - name: Synchronize iOS assets
-        run: npx cap sync ios
-      - name: Compile for iOS Simulator without code signing
+        working-directory: platforms/ios
+        run: |
+          npx cap add ios
+          npx cap sync ios
+      - name: Compile simulator app without code signing
+        working-directory: platforms/ios
         run: |
           xcodebuild \
             -workspace ios/App/App.xcworkspace \
@@ -114,9 +187,8 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build-ios \
             CODE_SIGNING_ALLOWED=NO build
-      - name: Upload simulator application
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: iptv-ios-simulator-app
-          path: apps/player/build-ios/Build/Products/Debug-iphonesimulator/App.app/
+          path: platforms/ios/build-ios/Build/Products/Debug-iphonesimulator/App.app/
           if-no-files-found: error
