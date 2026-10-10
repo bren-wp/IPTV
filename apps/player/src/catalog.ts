@@ -9,6 +9,13 @@ export interface Stream {
   labels: string[];
   requiresHeaders: boolean;
 }
+export interface GuideSource {
+  url: string;
+  site: string;
+  siteId: string;
+  lang: string | null;
+  format: 'XML';
+}
 export interface Channel {
   id: string;
   name: string;
@@ -17,6 +24,7 @@ export interface Channel {
   languages: string[];
   logo: string | null;
   streams: Stream[];
+  guides?: GuideSource[];
 }
 export interface Catalog {
   version: 1;
@@ -41,8 +49,10 @@ export function safeMediaUrl(value: unknown): string | null {
   } catch { return null; }
 }
 
-export function buildCatalog(channelsRaw: unknown, streamsRaw: unknown, logosRaw: unknown): Catalog {
-  if (!Array.isArray(channelsRaw) || !Array.isArray(streamsRaw) || !Array.isArray(logosRaw)) {
+export function buildCatalog(
+  channelsRaw: unknown, streamsRaw: unknown, logosRaw: unknown, guidesRaw: unknown = []
+): Catalog {
+  if (!Array.isArray(channelsRaw) || !Array.isArray(streamsRaw) || !Array.isArray(logosRaw) || !Array.isArray(guidesRaw)) {
     throw new Error('The upstream IPTV catalog has an unexpected format.');
   }
   const channels = new Map<string, Channel>();
@@ -53,7 +63,7 @@ export function buildCatalog(channelsRaw: unknown, streamsRaw: unknown, logosRaw
     channels.set(id, {
       id, name: str(raw.name) ?? id, country: str(raw.country) ?? 'XX',
       categories: strings(raw.categories), languages: strings(raw.languages),
-      logo: null, streams: []
+      logo: null, streams: [], guides: []
     });
   }
   // Prefer logos that the broadcaster currently uses, without losing fallback images.
@@ -78,6 +88,34 @@ export function buildCatalog(channelsRaw: unknown, streamsRaw: unknown, logosRaw
       requiresHeaders: Boolean(str(raw.referrer ?? raw.http_referrer) || str(raw.user_agent))
     });
   }
+
+  for (const raw of guidesRaw) {
+    if (!isRecord(raw)) continue;
+    const channel = channels.get(str(raw.channel) ?? '');
+    if (!channel || !Array.isArray(raw.sources)) continue;
+    for (const rawSource of raw.sources) {
+      if (!isRecord(rawSource) || (str(rawSource.format)?.toUpperCase() !== 'XML')) continue;
+      const url = safeMediaUrl(rawSource.url);
+      if (!url || (channel.guides?.length ?? 0) >= 8 ||
+        channel.guides?.some(guide => guide.url === url)) continue;
+      channel.guides?.push({
+        url,
+        site: str(raw.site) ?? 'Unknown provider',
+        siteId: str(raw.site_id) ?? channel.id,
+        lang: str(raw.lang),
+        format: 'XML'
+      });
+    }
+  }
+
+  // Put generally browser-compatible HTTPS HLS streams without special headers first.
+  const rankStream = (s: Stream) =>
+    (s.requiresHeaders ? 8 : 0) +
+    (s.url.startsWith('https:') ? 0 : 2) +
+    (new URL(s.url).pathname.toLowerCase().endsWith('.m3u8') ? 0 : 1);
+  for (const channel of channels.values()) {
+    channel.streams.sort((a, b) => rankStream(a) - rankStream(b));
+  }
   const playable = [...channels.values()].filter(channel => channel.streams.length > 0);
   playable.sort((a, b) => a.name.localeCompare(b.name, 'en'));
   return { version: 1, updatedAt: null, source: 'iptv-org', channels: playable };
@@ -89,7 +127,10 @@ export function isCatalog(value: unknown): value is Catalog {
     isRecord(ch) && typeof ch.id === 'string' && typeof ch.name === 'string' &&
     typeof ch.country === 'string' && Array.isArray(ch.categories) &&
     Array.isArray(ch.streams) && ch.streams.length > 0 &&
-    ch.streams.every((s: unknown) => isRecord(s) && Boolean(safeMediaUrl(s.url)))
+    ch.streams.every((s: unknown) => isRecord(s) && Boolean(safeMediaUrl(s.url))) &&
+    (!('guides' in ch) || (Array.isArray(ch.guides) && ch.guides.every((g: unknown) =>
+      isRecord(g) && Boolean(safeMediaUrl(g.url)) && g.format === 'XML' &&
+      typeof g.site === 'string' && typeof g.siteId === 'string')))
   );
 }
 
@@ -109,15 +150,19 @@ export function filterChannels(
 /** The app can refresh without a new release; generated same-origin snapshot remains a fallback. */
 export async function loadCatalog(signal?: AbortSignal): Promise<{ catalog: Catalog; isFallback: boolean }> {
   const fetchJson = async (path: string): Promise<unknown> => {
-    const response = await fetch(path, { signal, cache: 'no-store' });
+    const timeout = AbortSignal.timeout(20_000);
+    const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
+    const response = await fetch(path, { signal: combined, cache: 'no-store' });
     if (!response.ok) throw new Error('Catalog request failed (' + response.status + ').');
     return response.json();
   };
   try {
-    const [channels, streams, logos] = await Promise.all([
-      fetchJson(SOURCE + '/channels.json'), fetchJson(SOURCE + '/streams.json'), fetchJson(SOURCE + '/logos.json')
+    const [channels, streams, logos, guides] = await Promise.all([
+      fetchJson(SOURCE + '/channels.json'), fetchJson(SOURCE + '/streams.json'),
+      fetchJson(SOURCE + '/logos.json'),
+      fetchJson(SOURCE + '/guides.json').catch(() => [])
     ]);
-    const catalog = buildCatalog(channels, streams, logos);
+    const catalog = buildCatalog(channels, streams, logos, guides);
     if (catalog.channels.length === 0) throw new Error('No channels were returned.');
     catalog.updatedAt = new Date().toISOString();
     return { catalog, isFallback: false };
