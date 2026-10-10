@@ -12,10 +12,14 @@ async function fetchData(path: string): Promise<unknown> {
 }
 
 async function main(): Promise<void> {
-  const [channels, streams, logos] = await Promise.all([
-    fetchData('/channels.json'), fetchData('/streams.json'), fetchData('/logos.json')
+  const [channels, streams, logos, guides] = await Promise.all([
+    fetchData('/channels.json'), fetchData('/streams.json'),
+    fetchData('/logos.json'), fetchData('/guides.json').catch(error => {
+      console.warn('Guide metadata unavailable; preserving a playable channel catalog:', error);
+      return [];
+    })
   ]);
-  const catalog = buildCatalog(channels, streams, logos);
+  const catalog = buildCatalog(channels, streams, logos, guides);
   if (catalog.channels.length === 0) throw new Error('Refusing to publish an empty catalog.');
   let prior: unknown;
   try { prior = JSON.parse(await readFile(target, 'utf8')); } catch { prior = null; }

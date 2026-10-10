@@ -19,11 +19,13 @@ Cross-platform live-TV directory and player built around the publicly available 
 - Browse the worldwide IPTV-org catalog, filter by country/category and search channel names.
 - Favorite channels (stored locally on the device; no account needed).
 - Live HLS playback via browser-native HLS when available or HLS.js.
+- Optional per-channel XMLTV guide: now-playing and upcoming schedule entries from known third-party guide sources, loaded on demand.
+- Guide parsing enforces strict XMLTV times, bounded downloads and a programme-count limit. Web browsers may block remote XMLTV URLs due to CORS.
 - Multiple available sources per channel with manual fallback selection.
 - Keyboard directional navigation intended for TV remote use.
 - Exclude channel entries explicitly classified as NSFW, closed or lacking stream links.
-- Automatic catalog refresh every hour while the app is visible.
-- Scheduled GitHub Actions snapshot sync every six hours on the default branch, with an unchanged-content check.
+- Automatic catalog refresh every hour while the app is visible, with network timeouts and preferential ordering of HTTPS/HLS sources.
+- Scheduled GitHub Actions snapshot sync every six hours on the default branch, with an unchanged-content check; an initial sync also runs when catalog-related code is merged into main.
 - Fallback to the most recently generated local catalog when live API requests fail.
 
 ## Develop
@@ -75,10 +77,11 @@ The application reads:
 - `https://iptv-org.github.io/api/channels.json`
 - `https://iptv-org.github.io/api/streams.json`
 - `https://iptv-org.github.io/api/logos.json`
+- `https://iptv-org.github.io/api/guides.json` (XMLTV source directory; programme content is fetched only after a guide is opened)
 
-Records are joined by channel ID. Links are validated before use, duplicate URLs within a channel are removed, and changes are reflected without a new app release. The sync job does **not** download or redistribute video streams, and it never tries to bypass stream restrictions.
+Records are joined by channel ID. Links are validated before use, duplicate URLs within a channel are removed, and changes are reflected without a new app release. EPG data is only available for channels with a published XMLTV source whose XML identifiers match the channel or source ID. Remote EPG access depends on the provider allowing browser requests. The sync job does **not** download or redistribute video streams, and it never tries to bypass stream restrictions.
 
-Some streams require custom HTTP headers, may be geo-restricted, use unsupported codecs, have DRM, or cannot be played due to browser CORS/mixed-content policies. Stream labeling is not a substitute for playback tests from each target region/device. EPG schedules, broadcaster rights verification, TV store packaging, production signing and real-device testing are future work.
+Some streams require custom HTTP headers, may be geo-restricted, use unsupported codecs, have DRM, or cannot be played due to browser CORS/mixed-content policies. Stream labeling is not a substitute for playback tests from each target region/device. Complete EPG coverage, broadcaster rights verification, TV store packaging, production signing and real-device testing are future work.
 
 ## Privacy and legal
 
