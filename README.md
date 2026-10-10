@@ -44,7 +44,7 @@ The channel tiles reflect actual live streams and their metadata. Movies and Ser
 - **Live, not stale.** Hourly scheduled directory synchronization, in-app checks about every 15 minutes, and refresh on reconnect or window focus. The newest verified directory is also retained locally for offline startup.
 - **Your channels, your way.** Store favorites locally without account creation.
 - **More context.** Optional programme guide with *on now* and *up next* information.
-- **Resilient by default.** Multiple stream choices where available, URL validation, error handling and cached directory fallback.
+- **Resilient by default.** Multiple stream choices where available, bounded HLS recovery, automatic source switching on failure, URL validation and cached directory fallback.
 - **Privacy-minded.** No built-in advertising SDK or analytics tracking.
 
 ## Platforms
@@ -59,7 +59,7 @@ Each delivery target has a dedicated directory with its own configuration and pa
 | Samsung Tizen | [`platforms/samsung-tizen/`](platforms/samsung-tizen/) | Dedicated TV web bundle and manifest; signed WGT pending |
 | LG webOS | [`platforms/lg-webos/`](platforms/lg-webos/) | Separate packageable IPK CI with platform icon assets; device/store QA pending |
 | Web | [`platforms/web/`](platforms/web/) | Production static bundle built in CI |
-| Windows 10/11 | [`platforms/windows/`](platforms/windows/) | Separate Setup EXE and Portable EXE builds, with launcher smoke tests |
+| Windows 10/11 | [`platforms/windows/`](platforms/windows/) | Separate Setup EXE and Portable EXE builds, with actual portable launch smoke tests |
 
 > **Development status:** The web interface, Android debug APK and unsigned iOS simulator builds are compiled in CI. Platform signing, Smart TV certification, real-device quality assurance and content-rights review are not complete. A successful build is not a guarantee that a remote channel will play.
 
@@ -152,11 +152,11 @@ Channel metadata is checked in-app around every 15 minutes while online and visi
 
 ## GitHub releases
 
-**[IPTV v0.4.0 — Preview downloads](https://github.com/bren-wp/IPTV/releases/tag/v0.4.0)**
+**[IPTV v0.5.0 — Preview downloads](https://github.com/bren-wp/IPTV/releases/tag/v0.5.0)**
 
-The release pipeline publishes downloadable **Android debug APK**, **Android/Android TV unsigned AAB**, **Android TV debug APK**, **LG webOS IPK**, **iOS Simulator build**, **Samsung Tizen staging ZIP**, **Web ZIP** and SHA-256 checksums, but only after every platform CI job succeeds on the `main` branch. Check the release page for actual availability.
+The release pipeline publishes downloadable **Android and Android TV debug APKs**, **unsigned AABs**, **LG webOS IPK**, **iOS Simulator ZIP**, **Samsung Tizen staging ZIP**, **Web ZIP**, **Windows Setup/Portable EXEs** and SHA-256 checksums, but only after every platform CI job succeeds on the `main` branch. Check the release page for actual availability.
 
-These preview binaries are not certified, production-signed app-store submissions. See [v0.4.0 release notes](docs/releases/v0.4.0.md) and the [production release checklist](docs/PRODUCTION_RELEASE.md).
+These preview binaries are not certified, production-signed app-store submissions. See [v0.5.0 release notes](docs/releases/v0.5.0.md) and the [production release checklist](docs/PRODUCTION_RELEASE.md).
 
 ## Downloads and development builds
 
