@@ -1,94 +1,145 @@
+<div align="center">
+
 # IPTV
+### Your world of live television. One beautiful experience.
 
-Cross-platform live-TV directory and player built around the publicly available [iptv-org](https://github.com/iptv-org/iptv) channel catalog.
+**Live channels · Worldwide discovery · TV guide · Personal favorites**
 
-> **Project status:** Initial working application implementation. Web build and automated tests are configured, with an Android debug build workflow. iOS and Smart TV distribution builds have **not** yet been validated or published. Availability of individual streams is not guaranteed.
+[![Platform builds](https://github.com/bren-wp/IPTV/actions/workflows/player-ci.yml/badge.svg)](https://github.com/bren-wp/IPTV/actions/workflows/player-ci.yml)
+[![Catalog updates](https://github.com/bren-wp/IPTV/actions/workflows/catalog-sync.yml/badge.svg)](https://github.com/bren-wp/IPTV/actions/workflows/catalog-sync.yml)
 
-## Supported targets
+**Android · iOS · Android TV · Samsung Smart TV · LG Smart TV · Web**
 
-| Target | Current implementation |
-| --- | --- |
-| Modern web browsers | React + TypeScript + Vite interface, native video and HLS.js playback |
-| Android phones and tablets | Capacitor configuration + automated debug APK build on CI (compiled; device QA pending) |
-| Android TV / Google TV | Responsive web UI and keyboard/remote directional focus handling; platform certification and real-device QA pending |
-| iPhone / iPad | Capacitor configuration + unsigned iOS Simulator CI build; device signing and real-device QA pending |
-| Samsung Tizen / LG webOS | TV-friendly browser UI; store packages, platform APIs and real-device QA pending |
+</div>
 
-### Features
+---
 
-- Browse the worldwide IPTV-org catalog, filter by country/category and search channel names.
-- Favorite channels (stored locally on the device; no account needed).
-- Live HLS playback via browser-native HLS when available or HLS.js.
-- Optional per-channel XMLTV guide: now-playing and upcoming schedule entries from known third-party guide sources, loaded on demand.
-- Guide parsing enforces strict XMLTV times, bounded downloads and a programme-count limit. Web browsers may block remote XMLTV URLs due to CORS.
-- Multiple available sources per channel with manual fallback selection.
-- Keyboard directional navigation intended for TV remote use.
-- Exclude channel entries explicitly classified as NSFW, closed or lacking stream links.
-- Automatic catalog refresh every hour while the app is visible, with network timeouts and preferential ordering of HTTPS/HLS sources.
-- Scheduled GitHub Actions snapshot sync every six hours on the default branch, with an unchanged-content check; an initial sync also runs when catalog-related code is merged into main.
-- Fallback to the most recently generated local catalog when live API requests fail.
+## Television, simplified
+
+Discover publicly accessible live-TV channels in one beautifully organized interface. Search across countries and categories, switch between available broadcasts, and keep the channels you love close.
+
+Designed for a wide range of screens, from your phone to your living-room TV.
+
+### Highlights
+
+| Discover | Watch | Personalize |
+| --- | --- | --- |
+| Explore channels across countries and genres | Live HLS video with source selection | Build your favorites collection |
+| Search instantly by channel name | View programme schedules when available | Keep preferences on your device |
+| Filter by region and category | Navigate with touch, keyboard or remote focus | Refresh the channel directory automatically |
+
+### Thoughtful by design
+
+- **Beautiful dark interface.** Spacious cards, clean typography, accessible controls and adaptive layouts.
+- **Live, not stale.** Scheduled directory updates plus automatic refresh while the application is open.
+- **Your channels, your way.** Store favorites locally without account creation.
+- **More context.** Optional programme guide with *on now* and *up next* information.
+- **Resilient by default.** Multiple stream choices where available, URL validation, error handling and cached directory fallback.
+- **Privacy-minded.** No built-in advertising SDK or analytics tracking.
+
+## Platforms
+
+Each delivery target has a dedicated directory with its own configuration and packaging workflow. The playback interface and channel logic are shared to keep behavior consistent.
+
+| Platform | Directory | Delivery status |
+| --- | --- | --- |
+| Android mobile | [`platforms/android/`](platforms/android/) | Debug APK CI; production AAB and device QA pending |
+| iPhone & iPad | [`platforms/ios/`](platforms/ios/) | iOS Simulator CI; signed IPA and device QA pending |
+| Android TV / Google TV | [`platforms/android-tv/`](platforms/android-tv/) | Separate Leanback-capable debug build; remote/device QA pending |
+| Samsung Tizen | [`platforms/samsung-tizen/`](platforms/samsung-tizen/) | Dedicated TV web bundle and manifest; signed WGT pending |
+| LG webOS | [`platforms/lg-webos/`](platforms/lg-webos/) | Dedicated TV web bundle and manifest; IPK and device QA pending |
+| Web | [`platforms/web/`](platforms/web/) | Production static bundle built in CI |
+
+> **Development status:** The web interface, Android debug APK and unsigned iOS simulator builds are compiled in CI. Platform signing, Smart TV certification, real-device quality assurance and content-rights review are not complete. A successful build is not a guarantee that a remote channel will play.
+
+## Project structure
+
+```text
+IPTV/
+├── apps/
+│   └── player/             Shared React + TypeScript player, EPG and directory
+├── platforms/
+│   ├── android/            Android app, Capacitor configuration
+│   ├── ios/                iPhone/iPad app, Capacitor configuration
+│   ├── android-tv/         Android TV app and Leanback integration
+│   ├── samsung-tizen/      Samsung TV web bundle and Tizen manifest
+│   ├── lg-webos/           LG TV web bundle and webOS app metadata
+│   └── web/                Independent browser build
+├── scripts/                Platform bundling and Android TV configuration
+└── .github/workflows/      Platform CI and scheduled directory updates
+```
+
+Every target can be prepared independently. Platform bundles are **derived from tested shared sources**, not six divergent copies of the same UI.
 
 ## Develop
 
-Requires **Node.js 22+**.
+Requirements: Node.js **22+**, plus the platform SDK for the relevant target.
 
-```sh
+```bash
 cd apps/player
 npm install
-npm test
 npm run typecheck
+npm test
+npm run build
+```
+
+Preview locally:
+
+```bash
+cd apps/player
 npm run dev
 ```
 
-Build the production web bundle:
+Prepare the separate platform bundles (run after the shared web build):
 
-```sh
-cd apps/player
-npm run build
-npm run preview
+```bash
+node scripts/prepare-platform.mjs web android ios android-tv lg-webos samsung-tizen
 ```
 
-Synchronize channel metadata to a same-origin JSON snapshot (requires network access):
+### Mobile and Android TV builds
 
-```sh
-cd apps/player
-npm run sync:catalog
-```
+For Android:
 
-The initial committed snapshot is intentionally empty; the running application loads the public API on first launch. The scheduled sync workflow populates the snapshot once merged to `main` and enabled. GitHub scheduled workflows may be delayed or disabled due to repository settings or inactivity.
-
-### Android
-
-The `IPTV Player CI` workflow builds a **debug-signed test APK** and uploads it as a workflow artifact. It is not a production-signed Play Store release. The native project is generated during CI:
-
-```sh
-cd apps/player
+```bash
+cd platforms/android
 npm install
-npm run build
 npx cap add android
 npx cap sync android
+cd android
+./gradlew assembleDebug
 ```
 
-Production Android releases require signing keys, release configuration, target-device tests, store policy review and additional CI hardening. The CI also builds an unsigned iOS Simulator app on macOS; this simulator artifact is not an installable, device-signed IPA. For device distribution use a Mac with Xcode and configure Apple signing, entitlements, device tests and distribution.
+For iOS, follow the same workflow in `platforms/ios/`, using `npx cap add ios` / `npx cap sync ios`, then build with Xcode on macOS. Device installation and App Store submission require Apple signing.
 
-### IPTV-org integration
+For Android TV, use `platforms/android-tv/`, then run `node ../../scripts/patch-android-tv.mjs` after `npx cap add android`, before Gradle compilation.
 
-The application reads:
-- `https://iptv-org.github.io/api/channels.json`
-- `https://iptv-org.github.io/api/streams.json`
-- `https://iptv-org.github.io/api/logos.json`
-- `https://iptv-org.github.io/api/guides.json` (XMLTV source directory; programme content is fetched only after a guide is opened)
+### Smart TV and web builds
 
-Records are joined by channel ID. Links are validated before use, duplicate URLs within a channel are removed, and changes are reflected without a new app release. EPG data is only available for channels with a published XMLTV source whose XML identifiers match the channel or source ID. Remote EPG access depends on the provider allowing browser requests. The sync job does **not** download or redistribute video streams, and it never tries to bypass stream restrictions.
+The platform bundler prepares `platforms/samsung-tizen/staging/`, `platforms/lg-webos/staging/` and `platforms/web/dist/`. Samsung `.wgt` packaging requires Tizen Studio and an authorized certificate. LG `.ipk` packaging requires the webOS TV CLI plus the mandatory platform icon assets. Those signed/store-ready packages are not claimed as currently available.
 
-Some streams require custom HTTP headers, may be geo-restricted, use unsupported codecs, have DRM, or cannot be played due to browser CORS/mixed-content policies. Stream labeling is not a substitute for playback tests from each target region/device. Complete EPG coverage, broadcaster rights verification, TV store packaging, production signing and real-device testing are future work.
+## Automatic catalog updates
 
-## Privacy and legal
+Channel metadata is refreshed in-app and synchronized on the GitHub default branch every six hours. The update job validates the generated directory and avoids committing identical output. The last valid snapshot is retained if the upstream service fails. Video is played directly from the third-party providers; this repository does not host or rebroadcast TV streams.
 
-No account, application-hosted video stream or telemetry is included. Favorites stay in local storage. Direct playback connects users to third-party streaming servers, which can receive connection information. A publicly listed stream URL is **not proof of permission to redistribute** its content. Review broadcaster rights, licenses, API usage terms and the law applicable to the target markets before public commercial distribution.
+**Note:** Schedules and streams depend on the broadcaster. Some channels may be unavailable, restricted geographically, DRM-protected or incompatible with particular devices.
 
-Source data: [iptv-org/iptv](https://github.com/iptv-org/iptv), [iptv-org/database](https://github.com/iptv-org/database), [iptv-org/api](https://github.com/iptv-org/api). This app is an independent project, not an official IPTV-org client.
+## Downloads and development builds
 
-## Development safeguards
+Open [**GitHub Actions → Player CI**](https://github.com/bren-wp/IPTV/actions/workflows/player-ci.yml) to find the artifacts produced by successful builds. Debug APKs are for testing; iOS Simulator artifacts are not signed IPA files.
 
-GitHub Actions runs TypeScript checks, unit tests and a production web build before attempting the Android APK. Catalog syncs fail closed on malformed or empty upstream responses; the previous snapshot remains intact when sync fails.
+## Privacy and responsible distribution
+
+- Favorites remain in local device storage; there is no user account or application telemetry.
+- Playing a channel connects the device to external stream hosts, which may receive connection metadata.
+- Publicly accessible links do **not** themselves grant redistribution, commercial exhibition or rebroadcast rights.
+- Broadcasting permissions, streaming restrictions, platform-store requirements and content rights must be verified before a public commercial release.
+
+---
+
+<div align="center">
+
+**Find it. Watch it. Love it.**
+
+Made for a better live-TV experience.
+
+</div>

@@ -1,0 +1,19 @@
+{
+  "name": "@brendigo/iptv-android-tv",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sync:web": "node ../../scripts/prepare-platform.mjs android-tv",
+    "cap:add": "cap add android",
+    "cap:sync": "cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/core": "^7.4.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.4.0",
+    "@capacitor/android": "^7.4.0",
+    "typescript": "^5.8.0"
+  }
+}

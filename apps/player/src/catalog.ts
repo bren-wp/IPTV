@@ -1,4 +1,4 @@
-/** The public iptv-org API supplies links and metadata, not streaming rights. */
+/** External public channel metadata provides links, not broadcast rights. */
 export const SOURCE = 'https://iptv-org.github.io/api';
 export const CACHE_PATH = './catalog.json';
 
@@ -118,7 +118,7 @@ export function buildCatalog(
   }
   const playable = [...channels.values()].filter(channel => channel.streams.length > 0);
   playable.sort((a, b) => a.name.localeCompare(b.name, 'en'));
-  return { version: 1, updatedAt: null, source: 'iptv-org', channels: playable };
+  return { version: 1, updatedAt: null, source: 'Public TV directory', channels: playable };
 }
 
 export function isCatalog(value: unknown): value is Catalog {

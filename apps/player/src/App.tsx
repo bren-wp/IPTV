@@ -147,7 +147,7 @@ export default function App() {
           <button type="button" className={favoritesOnly ? 'nav-item active' : 'nav-item'} onClick={() => setFavoritesOnly(true)}>
             <span aria-hidden="true">♡</span> Favorites <small>{favoritesCount}</small>
           </button>
-          <div className="sidebar-footer">Public streams supplied by <a href="https://github.com/iptv-org/iptv" target="_blank" rel="noopener noreferrer">iptv-org</a>. Channel availability varies by region.</div>
+          <div className="sidebar-footer">Live television, thoughtfully organized. Stream availability varies by broadcaster, device and region.</div>
         </aside>
 
         <div className="main-content">
