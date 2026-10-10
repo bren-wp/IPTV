@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" id="https://brendigo.com/iptv/tv" version="0.2.0" viewmodes="maximized">
+<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" id="https://brendigo.com/iptv/tv" version="0.3.0" viewmodes="maximized">
   <name>IPTV</name>
   <content src="index.html"/>
+  <icon src="icon.png"/>
   <description>Browse publicly available live television channels.</description>
   <tizen:application id="BrendigoTV.IPTV" package="BrendigoTV" required_version="5.5"/>
   <access origin="*" subdomains="true"/>
