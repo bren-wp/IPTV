@@ -32,6 +32,11 @@ function insideRoundedRect(x, y, l, t, r, b, radius) {
   const py = Math.max(t + radius, Math.min(y, b - radius));
   return (x - px) ** 2 + (y - py) ** 2 <= radius ** 2;
 }
+function nearSegment(x, y, x1, y1, x2, y2, width) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const t = Math.max(0, Math.min(1, ((x - x1) * dx + (y - y1) * dy) / (dx*dx + dy*dy)));
+  return Math.hypot(x - (x1 + t*dx), y - (y1 + t*dy)) <= width;
+}
 function image(size) {
   const rows = Buffer.alloc(size * (size * 4 + 1));
   const stride = size * 4 + 1;
@@ -40,16 +45,19 @@ function image(size) {
       const px = (x + .5) / size;
       const py = (y + .5) / size;
       let c = [12, 21, 39];
-      const face = insideRoundedRect(px, py, .17, .24, .83, .72, .085);
-      const bezel = insideRoundedRect(px, py, .21, .28, .79, .68, .064);
-      if (face) c = [48, 113, 230];
-      if (bezel) c = [27, 77, 179];
-      // Play triangle with a geometry-derived edge, no font dependency.
-      const tx = (px - .425) / .22;
-      const ty = Math.abs(py - .48) / .20;
-      if (tx >= 0 && tx <= 1 && ty <= tx) c = [251, 253, 255];
-      if (insideRoundedRect(px, py, .43, .73, .57, .78, .022)) c = [102, 157, 245];
-      if (insideRoundedRect(px, py, .36, .79, .64, .824, .015)) c = [102, 157, 245];
+      // Keep every Android, Apple, TV and browser icon aligned with brand-symbol.svg.
+      const antennas = nearSegment(px, py, .43, .285, .32, .14, .018) ||
+        nearSegment(px, py, .57, .285, .68, .14, .018) ||
+        Math.hypot(px-.32, py-.14) < .032 || Math.hypot(px-.68, py-.14) < .032;
+      if (antennas) c = [83, 192, 254];
+      const outline = insideRoundedRect(px, py, .135, .27, .865, .83, .126);
+      const inside = insideRoundedRect(px, py, .20, .34, .80, .76, .092);
+      if (outline) c = [37, 123, 247];
+      if (inside) c = [5, 21, 50];
+      // Anti-distraction white play triangle; no character glyph or remote font.
+      const tx = (px - .39) / .27;
+      const ty = Math.abs(py - .55) / .20;
+      if (tx >= 0 && tx <= 1 && ty <= tx) c = [248, 250, 252];
       const index = y * stride + 1 + x * 4;
       rows[index] = c[0]; rows[index + 1] = c[1]; rows[index + 2] = c[2]; rows[index + 3] = 255;
     }
