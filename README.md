@@ -133,6 +133,14 @@ Channel metadata is refreshed in-app and synchronized on the GitHub default bran
 
 **Note:** Schedules and streams depend on the broadcaster. Some channels may be unavailable, restricted geographically, DRM-protected or incompatible with particular devices.
 
+## GitHub releases
+
+**[IPTV v0.4.0 — Preview downloads](https://github.com/bren-wp/IPTV/releases/tag/v0.4.0)**
+
+The release pipeline publishes downloadable **Android debug APK**, **Android/Android TV unsigned AAB**, **Android TV debug APK**, **LG webOS IPK**, **iOS Simulator build**, **Samsung Tizen staging ZIP**, **Web ZIP** and SHA-256 checksums, but only after every platform CI job succeeds on the `main` branch. Check the release page for actual availability.
+
+These preview binaries are not certified, production-signed app-store submissions. See [v0.4.0 release notes](docs/releases/v0.4.0.md) and the [production release checklist](docs/PRODUCTION_RELEASE.md).
+
 ## Downloads and development builds
 
 Open [**GitHub Actions → Player CI**](https://github.com/bren-wp/IPTV/actions/workflows/player-ci.yml) to find the artifacts produced by successful builds. Debug APKs are for testing; iOS Simulator artifacts are not signed IPA files.
