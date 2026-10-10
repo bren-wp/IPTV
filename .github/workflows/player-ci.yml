@@ -28,6 +28,10 @@ on:
       - '.github/workflows/release-distributions.yml'
   workflow_dispatch:
 
+concurrency:
+  group: iptv-platform-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
+
 permissions:
   contents: read
 
