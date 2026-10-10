@@ -1,0 +1,9 @@
+# Web player build artifacts and dependency caches
+apps/player/node_modules/
+apps/player/dist/
+apps/player/.vite/
+apps/player/android/
+apps/player/ios/
+apps/player/.DS_Store
+apps/player/public/catalog.json.tmp
+*.log

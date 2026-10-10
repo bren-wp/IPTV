@@ -1,0 +1,41 @@
+name: IPTV Catalog Sync
+
+on:
+  schedule:
+    - cron: '19 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: iptv-catalog-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install catalog dependencies
+        working-directory: apps/player
+        run: npm install --no-audit --no-fund
+      - name: Generate catalog snapshot
+        working-directory: apps/player
+        run: npm run sync:catalog
+      - name: Commit updated catalog only when contents change
+        run: |
+          git add apps/player/public/catalog.json
+          if git diff --cached --quiet; then
+            echo "Catalog already up-to-date"
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "chore(catalog): synchronize upstream IPTV directory"
+          git push
