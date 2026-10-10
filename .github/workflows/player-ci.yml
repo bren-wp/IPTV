@@ -14,6 +14,7 @@ on:
       - 'scripts/verify-release-assets.mjs'
       - '.github/workflows/player-ci.yml'
       - '.github/workflows/release-distributions.yml'
+      - 'docs/releases/**'
   pull_request:
     paths:
       - 'apps/player/**'
@@ -26,6 +27,7 @@ on:
       - 'scripts/verify-release-assets.mjs'
       - '.github/workflows/player-ci.yml'
       - '.github/workflows/release-distributions.yml'
+      - 'docs/releases/**'
   workflow_dispatch:
 
 concurrency:
@@ -254,3 +256,103 @@ jobs:
           name: iptv-ios-simulator-app
           path: platforms/ios/build-ios/Build/Products/Debug-iphonesimulator/App.app/
           if-no-files-found: error
+
+  publish_preview:
+    name: Publish v0.4.0 GitHub Preview Release
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    needs: [web, android, android_tv, ios]
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: write
+      actions: read
+    concurrency:
+      group: iptv-v0.4.0-preview-release
+      cancel-in-progress: false
+    steps:
+      - name: Check out the tested source revision
+        uses: actions/checkout@v4
+      - name: Check whether this version is already published
+        id: existing
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view v0.4.0 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release v0.4.0 already exists. Not overwriting release binaries."
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Download exactly the artifacts built by this successful workflow
+        if: steps.existing.outputs.present == 'false'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: iptv-*
+          path: artifacts
+          merge-multiple: false
+      - name: Verify and prepare named distributable files
+        if: steps.existing.outputs.present == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release
+          for item in iptv-web iptv-samsung-tizen-staging iptv-lg-webos-ipk \
+                      iptv-android-debug-apk iptv-android-release-aab-unsigned \
+                      iptv-android-tv-debug-apk iptv-android-tv-release-aab-unsigned \
+                      iptv-ios-simulator-app; do
+            test -d "artifacts/$item" || { echo "::error::Missing CI artifact $item"; exit 1; }
+          done
+          copy_one() {
+            local from="$1" ext="$2" target="$3"
+            local files=()
+            mapfile -d '' files < <(find "artifacts/$from" -type f -name "*.$ext" -print0)
+            if [ "${#files[@]}" -ne 1 ]; then
+              echo "::error::$from has ${#files[@]} *.$ext files; expected exactly one."
+              exit 1
+            fi
+            test -s "${files[0]}"
+            cp "${files[0]}" "release/$target"
+          }
+          copy_one iptv-android-debug-apk apk IPTV-v0.4.0-Android-debug.apk
+          copy_one iptv-android-release-aab-unsigned aab IPTV-v0.4.0-Android-release-UNSIGNED.aab
+          copy_one iptv-android-tv-debug-apk apk IPTV-v0.4.0-AndroidTV-debug.apk
+          copy_one iptv-android-tv-release-aab-unsigned aab IPTV-v0.4.0-AndroidTV-release-UNSIGNED.aab
+          copy_one iptv-lg-webos-ipk ipk IPTV-v0.4.0-LG-webOS.ipk
+          test -s artifacts/iptv-web/index.html
+          test -s artifacts/iptv-samsung-tizen-staging/config.xml
+          test -n "$(find artifacts/iptv-ios-simulator-app -type f -name Info.plist -print -quit)"
+          (cd artifacts/iptv-web && zip -qr "$GITHUB_WORKSPACE/release/IPTV-v0.4.0-Web.zip" .)
+          (cd artifacts/iptv-samsung-tizen-staging && zip -qr "$GITHUB_WORKSPACE/release/IPTV-v0.4.0-Samsung-Tizen-STAGING.zip" .)
+          (cd artifacts/iptv-ios-simulator-app && zip -qr "$GITHUB_WORKSPACE/release/IPTV-v0.4.0-iOS-Simulator-UNSIGNED.zip" .)
+          for archive in release/*.apk release/*.aab release/*.zip; do
+            unzip -tq "$archive" >/dev/null
+          done
+          (cd release && sha256sum IPTV-v0.4.0-* > SHA256SUMS.txt)
+          test "$(find release -maxdepth 1 -type f | wc -l)" -eq 9
+          ls -lh release/
+      - name: Publish the verified preview release with eight assets and checksums
+        if: steps.existing.outputs.present == 'false'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create v0.4.0 release/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "IPTV v0.4.0 — Cross-platform Preview" \
+            --notes-file docs/releases/v0.4.0.md \
+            --prerelease
+          echo "Published https://github.com/$GITHUB_REPOSITORY/releases/tag/v0.4.0"
+      - name: Verify GitHub release assets
+        if: steps.existing.outputs.present == 'false'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release view v0.4.0 --repo "$GITHUB_REPOSITORY" --json tagName,isPrerelease,assets \
+            --jq '{tag:.tagName,prerelease:.isPrerelease,asset_names:[.assets[].name]}'
+          count="$(gh release view v0.4.0 --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets | length')"
+          test "$count" -eq 9 || { echo "::error::Expected nine release assets, received $count"; exit 1; }
