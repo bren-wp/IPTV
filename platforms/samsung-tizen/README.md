@@ -1,13 +1,12 @@
-# Samsung Tizen TV
+# Samsung Tizen Smart TV
 
-Separate Tizen web widget directory with TV-profile `config.xml` and a built web bundle.
+Dedicated Tizen TV widget, manifest, and generated 117×117 app icon.
 
 ```bash
 cd apps/player && npm install && npm run build && cd ../..
 node scripts/prepare-platform.mjs samsung-tizen
+node scripts/generate-app-icons.mjs samsung-tizen
+node scripts/verify-release-assets.mjs samsung-tizen
 ```
 
-Generated directory: `platforms/samsung-tizen/staging/`.
-CI artifact: `iptv-samsung-tizen-staging` (unsigned staging **not** a `.wgt`).
-
-To create a deployable `.wgt`, use Samsung Tizen Studio and valid certificate profiles, then verify remote focus, compatible codecs, stream access and device/OS version support on actual TVs. A TV app icon and store marketing assets must be provided before submission.
+**CI artifact:** `iptv-samsung-tizen-staging` (not a signed WGT). The protected signed build requires Tizen Studio and a valid Samsung TV certificate profile on a dedicated runner. Physical TV installation, decoder compatibility and store approvals are still required.

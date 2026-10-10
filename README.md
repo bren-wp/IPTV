@@ -43,11 +43,11 @@ Each delivery target has a dedicated directory with its own configuration and pa
 
 | Platform | Directory | Delivery status |
 | --- | --- | --- |
-| Android mobile | [`platforms/android/`](platforms/android/) | Debug APK CI; production AAB and device QA pending |
-| iPhone & iPad | [`platforms/ios/`](platforms/ios/) | iOS Simulator CI; signed IPA and device QA pending |
-| Android TV / Google TV | [`platforms/android-tv/`](platforms/android-tv/) | Separate Leanback-capable debug build; remote/device QA pending |
+| Android mobile | [`platforms/android/`](platforms/android/) | Debug APK and unsigned release AAB CI; signed production AAB gated on credentials |
+| iPhone & iPad | [`platforms/ios/`](platforms/ios/) | iOS Simulator CI and gated signed IPA workflow; Apple credentials and device QA required |
+| Android TV / Google TV | [`platforms/android-tv/`](platforms/android-tv/) | Leanback APK and unsigned AAB CI; signed bundle and TV QA required |
 | Samsung Tizen | [`platforms/samsung-tizen/`](platforms/samsung-tizen/) | Dedicated TV web bundle and manifest; signed WGT pending |
-| LG webOS | [`platforms/lg-webos/`](platforms/lg-webos/) | Dedicated TV web bundle and manifest; IPK and device QA pending |
+| LG webOS | [`platforms/lg-webos/`](platforms/lg-webos/) | Separate packageable IPK CI with platform icon assets; device/store QA pending |
 | Web | [`platforms/web/`](platforms/web/) | Production static bundle built in CI |
 
 > **Development status:** The web interface, Android debug APK and unsigned iOS simulator builds are compiled in CI. Platform signing, Smart TV certification, real-device quality assurance and content-rights review are not complete. A successful build is not a guarantee that a remote channel will play.
@@ -115,7 +115,7 @@ For Android TV, use `platforms/android-tv/`, then run `node ../../scripts/patch-
 
 ### Smart TV and web builds
 
-The platform bundler prepares `platforms/samsung-tizen/staging/`, `platforms/lg-webos/staging/` and `platforms/web/dist/`. Samsung `.wgt` packaging requires Tizen Studio and an authorized certificate. LG `.ipk` packaging requires the webOS TV CLI plus the mandatory platform icon assets. Those signed/store-ready packages are not claimed as currently available.
+The platform bundler prepares `platforms/samsung-tizen/staging/`, `platforms/lg-webos/staging/` and `platforms/web/dist/`. Samsung `.wgt` packaging requires Tizen Studio and a valid Samsung certificate. LG `.ipk` packaging is automated in CI with the current webOS CLI and mandatory icon assets; TV Seller Lounge acceptance and physical-device QA remain pending.
 
 ## Automatic catalog updates
 
@@ -126,6 +126,12 @@ Channel metadata is refreshed in-app and synchronized on the GitHub default bran
 ## Downloads and development builds
 
 Open [**GitHub Actions → Player CI**](https://github.com/bren-wp/IPTV/actions/workflows/player-ci.yml) to find the artifacts produced by successful builds. Debug APKs are for testing; iOS Simulator artifacts are not signed IPA files.
+
+## Production distribution
+
+The [signed production workflow](.github/workflows/release-distributions.yml) supports Android/Android TV signed AABs and iOS signed IPA export when the required encrypted GitHub Environment credentials have been configured. Debug and unsigned outputs are **not** Play Store or App Store releases.
+
+Before shipping publicly, complete the [Production release checklist](docs/PRODUCTION_RELEASE.md). Release blockers include platform signing certificates, broadcaster distribution rights, Samsung TV certificates, store assets and real-device playback/remote testing. The CI pipeline deliberately does not call an unverified build "production ready".
 
 ## Privacy and responsible distribution
 

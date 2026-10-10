@@ -1,0 +1,240 @@
+name: Signed production distributions
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Which signed distribution to produce?'
+        required: true
+        type: choice
+        options:
+          - android
+          - android-tv
+          - ios
+          - samsung-tizen
+
+permissions:
+  contents: read
+
+concurrency:
+  group: iptv-signed-${{ inputs.target }}
+  cancel-in-progress: false
+
+jobs:
+  android:
+    if: ${{ inputs.target == 'android' || inputs.target == 'android-tv' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    environment: production
+    env:
+      STORE_B64: ${{ secrets.ANDROID_RELEASE_KEYSTORE_BASE64 }}
+      STORE_PASSWORD: ${{ secrets.ANDROID_RELEASE_STORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.ANDROID_RELEASE_KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}
+      TARGET: ${{ inputs.target }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Validate signing configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          for key in STORE_B64 STORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [ -z "${!key}" ]; then
+              echo "::error::Missing required production signing secret: $key"
+              exit 1
+            fi
+          done
+          printf %s "$STORE_B64" | base64 --decode > "$RUNNER_TEMP/iptv-release.keystore"
+          chmod 600 "$RUNNER_TEMP/iptv-release.keystore"
+          keytool -list -keystore "$RUNNER_TEMP/iptv-release.keystore" -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null
+      - name: Prepare Android SDK
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
+          test -n "$SDKMANAGER"
+          "$SDKMANAGER" --install "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+      - name: Install build dependencies
+        run: |
+          npm install --prefix apps/player --no-audit --no-fund
+          npm install --prefix "platforms/$TARGET" --no-audit --no-fund
+      - name: Generate platform sources and brand assets
+        run: |
+          npm --prefix apps/player run typecheck
+          npm --prefix apps/player test
+          npm --prefix apps/player run build
+          node scripts/prepare-platform.mjs "$TARGET"
+          cd "platforms/$TARGET"
+          npx cap add android
+          npx cap sync android
+          cd ../..
+          if [ "$TARGET" = "android-tv" ]; then node scripts/patch-android-tv.mjs; fi
+          node scripts/configure-android-release.mjs "$TARGET"
+          node scripts/generate-app-icons.mjs "$TARGET"
+          node scripts/verify-release-assets.mjs "$TARGET"
+      - name: Create signed production AAB
+        shell: bash
+        env:
+          ANDROID_RELEASE_STORE_FILE: ${{ runner.temp }}/iptv-release.keystore
+          ANDROID_RELEASE_STORE_PASSWORD: ${{ secrets.ANDROID_RELEASE_STORE_PASSWORD }}
+          ANDROID_RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_RELEASE_KEY_ALIAS }}
+          ANDROID_RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          cat >> "platforms/$TARGET/android/app/build.gradle" <<'GRADLE'
+
+          android {
+              signingConfigs {
+                  releaseStore {
+                      storeFile file(System.getenv("ANDROID_RELEASE_STORE_FILE"))
+                      storePassword System.getenv("ANDROID_RELEASE_STORE_PASSWORD")
+                      keyAlias System.getenv("ANDROID_RELEASE_KEY_ALIAS")
+                      keyPassword System.getenv("ANDROID_RELEASE_KEY_PASSWORD")
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.releaseStore
+                  }
+              }
+          }
+          GRADLE
+          cd "platforms/$TARGET/android"
+          ./gradlew bundleRelease --no-daemon
+          test -s app/build/outputs/bundle/release/app-release.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iptv-${{ inputs.target }}-signed-aab
+          path: platforms/${{ inputs.target }}/android/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 7
+
+  ios:
+    if: ${{ inputs.target == 'ios' }}
+    runs-on: macos-15
+    timeout-minutes: 40
+    environment: production
+    env:
+      CERT_B64: ${{ secrets.IOS_DISTRIBUTION_P12_BASE64 }}
+      CERT_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_P12_PASSWORD }}
+      PROFILE_B64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+      TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+      PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
+      KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate iOS credentials
+        run: |
+          set -euo pipefail
+          for key in CERT_B64 CERT_PASSWORD PROFILE_B64 TEAM_ID PROFILE_NAME KEYCHAIN_PASSWORD; do
+            if [ -z "${!key}" ]; then echo "::error::Missing required production signing secret: $key"; exit 1; fi
+          done
+      - name: Install Apple signing identity and provisioning profile
+        run: |
+          set -euo pipefail
+          KEYCHAIN="$RUNNER_TEMP/iptv-signing.keychain-db"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN" login.keychain-db
+          printf '%s' "$CERT_B64" | base64 --decode > "$RUNNER_TEMP/distribution.p12"
+          security import "$RUNNER_TEMP/distribution.p12" -k "$KEYCHAIN" -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          printf '%s' "$PROFILE_B64" | base64 --decode > "$HOME/Library/MobileDevice/Provisioning Profiles/iptv.mobileprovision"
+      - name: Build iOS release application
+        run: |
+          npm install --prefix apps/player --no-audit --no-fund
+          npm install --prefix platforms/ios --no-audit --no-fund
+          npm --prefix apps/player run typecheck
+          npm --prefix apps/player test
+          npm --prefix apps/player run build
+          node scripts/prepare-platform.mjs ios
+          cd platforms/ios
+          npx cap add ios
+          npx cap sync ios
+          cd ../..
+          node scripts/generate-app-icons.mjs ios
+          node scripts/verify-release-assets.mjs ios
+          cd platforms/ios
+          xcodebuild -workspace ios/App/App.xcworkspace \
+            -scheme App -configuration Release -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/IPTV.xcarchive" \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            CODE_SIGN_STYLE=Manual \
+            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" \
+            MARKETING_VERSION=0.3.0 CURRENT_PROJECT_VERSION=3 archive
+      - name: Export signed IPA
+        run: |
+          python3 - <<'PY'
+          import os, plistlib
+          options = {
+            'method': 'app-store-connect',
+            'signingStyle': 'manual',
+            'teamID': os.environ['TEAM_ID'],
+            'provisioningProfiles': {'com.brendigo.iptv': os.environ['PROFILE_NAME']}
+          }
+          with open(os.environ['RUNNER_TEMP'] + '/ExportOptions.plist','wb') as f:
+              plistlib.dump(options,f)
+          PY
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/IPTV.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/iptv-ipa"
+          test -n "$(find "$RUNNER_TEMP/iptv-ipa" -name '*.ipa' -size +0c -print -quit)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iptv-ios-signed-ipa
+          path: ${{ runner.temp }}/iptv-ipa/*.ipa
+          if-no-files-found: error
+          retention-days: 7
+
+  samsung_tizen:
+    if: ${{ inputs.target == 'samsung-tizen' }}
+    # Samsung Tizen Studio and a valid TV certificate profile must be installed on this protected runner.
+    runs-on: [self-hosted, linux, tizen]
+    timeout-minutes: 35
+    environment: production
+    env:
+      TIZEN_CERTIFICATE_PROFILE: ${{ secrets.TIZEN_CERTIFICATE_PROFILE }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate Samsung signing prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$TIZEN_CERTIFICATE_PROFILE" || { echo "::error::Missing TIZEN_CERTIFICATE_PROFILE"; exit 1; }
+          command -v tizen >/dev/null || { echo "::error::Tizen Studio CLI is required on this runner."; exit 1; }
+      - name: Build TV widget
+        run: |
+          npm install --prefix apps/player --no-audit --no-fund
+          npm --prefix apps/player run typecheck
+          npm --prefix apps/player test
+          npm --prefix apps/player run build
+          node scripts/prepare-platform.mjs samsung-tizen
+          node scripts/generate-app-icons.mjs samsung-tizen
+          node scripts/verify-release-assets.mjs samsung-tizen
+      - name: Sign and package Samsung TV WGT
+        shell: bash
+        run: |
+          set -euo pipefail
+          tizen build-web -- platforms/samsung-tizen/staging
+          tizen package -t wgt -s "$TIZEN_CERTIFICATE_PROFILE" -- platforms/samsung-tizen/staging/.buildResult
+          test -n "$(find platforms/samsung-tizen/staging/.buildResult -name '*.wgt' -size +0c -print -quit)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iptv-samsung-tizen-signed-wgt
+          path: platforms/samsung-tizen/staging/.buildResult/*.wgt
+          if-no-files-found: error
+          retention-days: 7

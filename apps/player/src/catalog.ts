@@ -38,13 +38,35 @@ const isRecord = (v: unknown): v is Record<string, unknown> =>
 const str = (v: unknown): string | null => typeof v === 'string' && v.trim() ? v.trim() : null;
 const strings = (v: unknown): string[] => Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && x.length > 0) : [];
 
-/** Never load script:, file:, data: or embedded credentials from a contributed URL. */
+/**
+ * Reject local/private network destinations in user-visible, third-party catalog URLs.
+ * This prevents untrusted playlist entries from reaching router/admin endpoints on a viewer's LAN.
+ */
 export function safeMediaUrl(value: unknown): string | null {
   const valueString = str(value);
   if (!valueString) return null;
   try {
     const u = new URL(valueString);
     if ((u.protocol !== 'https:' && u.protocol !== 'http:') || u.username || u.password) return null;
+    const host = u.hostname.toLowerCase();
+    if (!host || host === 'localhost' || host.endsWith('.localhost') ||
+        host.endsWith('.local') || host.endsWith('.internal') ||
+        host.endsWith('.home.arpa') || host === '0' || host.endsWith('.invalid')) return null;
+    if (host.startsWith('[') && host.endsWith(']')) {
+      const ip = host.slice(1, -1);
+      if (ip === '::1' || ip === '::' || ip.startsWith('fc') || ip.startsWith('fd') ||
+          ip.startsWith('fe8') || ip.startsWith('fe9') || ip.startsWith('fea') ||
+          ip.startsWith('feb') || ip.startsWith('::ffff:')) return null;
+    }
+    if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) {
+      const [first, second] = host.split('.').map(Number);
+      if (first === 0 || first === 10 || first === 127 || first >= 224 ||
+          (first === 100 && second >= 64 && second <= 127) ||
+          (first === 169 && second === 254) ||
+          (first === 172 && second >= 16 && second <= 31) ||
+          (first === 192 && (second === 168 || second === 0)) ||
+          (first === 198 && (second === 18 || second === 19))) return null;
+    }
     return u.href;
   } catch { return null; }
 }
@@ -145,6 +167,19 @@ export function filterChannels(
     (category === 'ALL' || ch.categories.includes(category)) &&
     (!q || ch.name.toLocaleLowerCase().includes(q) || ch.id.toLocaleLowerCase().includes(q))
   );
+}
+
+/** Load the bundled verified snapshot before accessing any external service. */
+export async function loadCachedCatalog(signal?: AbortSignal): Promise<Catalog | null> {
+  try {
+    const response = await fetch(CACHE_PATH, { signal, cache: 'no-store' });
+    if (!response.ok) return null;
+    const value: unknown = await response.json();
+    return isCatalog(value) && value.channels.length > 0 ? value : null;
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    return null;
+  }
 }
 
 /** The app can refresh without a new release; generated same-origin snapshot remains a fallback. */

@@ -1,13 +1,16 @@
 # LG webOS TV
 
-Separate webOS web app with its own `appinfo.json` and generated web assets.
+Dedicated LG TV app manifest and deliverable `.ipk` package.
 
 ```bash
 cd apps/player && npm install && npm run build && cd ../..
 node scripts/prepare-platform.mjs lg-webos
+node scripts/generate-app-icons.mjs lg-webos
+node scripts/verify-release-assets.mjs lg-webos
+npm install -g @webos-tools/cli@3.2.6
+ares-config --profile tv
+mkdir -p platforms/lg-webos/outputs
+ares-package --no-minify -o platforms/lg-webos/outputs platforms/lg-webos/staging
 ```
 
-Generated directory: `platforms/lg-webos/staging/`.
-CI artifact: `iptv-lg-webos-staging` (unsigned staging **not** an `.ipk`).
-
-An 80x80 PNG icon is required in the staging directory before invoking `ares-package` via the LG webOS TV CLI. Final installation, remote controls, CORS, codecs and stream behavior must be validated on actual LG devices.
+**CI artifact:** `iptv-lg-webos-ipk`. The required 80×80 and 130×130 PNG icons are generated deterministically; brand artwork must be approved before store submission. Installation, remote focus, CORS and hardware codecs still require real-device QA.

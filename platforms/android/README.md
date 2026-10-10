@@ -1,17 +1,18 @@
 # Android
 
-Dedicated Android phone/tablet project. Shared UI is built in `apps/player`; this directory owns Android packaging and application identity.
+Dedicated phone/tablet package. Shared playback code lives in `apps/player/`; Android release identity and signing are separate.
 
 ```bash
 cd apps/player && npm install && npm run build && cd ../..
 node scripts/prepare-platform.mjs android
 cd platforms/android
-npm install
-npx cap add android
-npx cap sync android
-cd android && ./gradlew assembleDebug
+npm install && npx cap add android && npx cap sync android
+cd ../..
+node scripts/configure-android-release.mjs android
+node scripts/generate-app-icons.mjs android
+node scripts/verify-release-assets.mjs android
+cd platforms/android/android
+./gradlew assembleDebug bundleRelease
 ```
 
-**CI artifact:** `iptv-android-debug-apk`. This is a debug-signed installable test build; publishing an AAB requires keystore/signing, store compliance and physical-device QA.
-
-Do not commit generated Android projects, signing keys or developer credentials. The CI pipeline regenerates native sources deterministically.
+**CI artifacts:** `iptv-android-debug-apk`, `iptv-android-release-aab-unsigned`. The separately protected [signed production workflow](../../.github/workflows/release-distributions.yml) generates a signed AAB once keystore secrets are configured. Publishing also requires rights verification, store checks and device QA. Never commit private keys.
