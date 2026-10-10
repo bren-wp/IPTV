@@ -9,6 +9,9 @@ on:
       - 'platforms/**'
       - 'scripts/prepare-platform.mjs'
       - 'scripts/patch-android-tv.mjs'
+      - 'scripts/generate-app-icons.mjs'
+      - 'scripts/configure-android-release.mjs'
+      - 'scripts/verify-release-assets.mjs'
       - '.github/workflows/player-ci.yml'
   pull_request:
     paths:
@@ -17,6 +20,9 @@ on:
       - 'platforms/**'
       - 'scripts/prepare-platform.mjs'
       - 'scripts/patch-android-tv.mjs'
+      - 'scripts/generate-app-icons.mjs'
+      - 'scripts/configure-android-release.mjs'
+      - 'scripts/verify-release-assets.mjs'
       - '.github/workflows/player-ci.yml'
   workflow_dispatch:
 
@@ -46,6 +52,23 @@ jobs:
         run: npm run build
       - name: Prepare separate web and Smart TV bundles
         run: node scripts/prepare-platform.mjs web samsung-tizen lg-webos
+      - name: Generate platform icons
+        run: |
+          node scripts/generate-app-icons.mjs web
+          node scripts/generate-app-icons.mjs samsung-tizen
+          node scripts/generate-app-icons.mjs lg-webos
+      - name: Validate release assets
+        run: |
+          node scripts/verify-release-assets.mjs web
+          node scripts/verify-release-assets.mjs samsung-tizen
+          node scripts/verify-release-assets.mjs lg-webos
+      - name: Package LG webOS IPK
+        run: |
+          npm install -g @webos-tools/cli@3.2.6 --no-audit --no-fund
+          ares-config --profile tv
+          mkdir -p platforms/lg-webos/outputs
+          ares-package --no-minify -o platforms/lg-webos/outputs platforms/lg-webos/staging
+          test -n "$(find platforms/lg-webos/outputs -name '*.ipk' -size +0c -print -quit)"
       - name: Verify static distribution structure
         run: |
           test -s platforms/web/dist/index.html
@@ -66,8 +89,8 @@ jobs:
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
-          name: iptv-lg-webos-staging
-          path: platforms/lg-webos/staging/
+          name: iptv-lg-webos-ipk
+          path: platforms/lg-webos/outputs/*.ipk
           if-no-files-found: error
 
   android:
@@ -102,13 +125,23 @@ jobs:
         run: |
           npx cap add android
           npx cap sync android
-      - name: Assemble Android debug APK
+      - name: Configure Android release metadata and icon
+        run: |
+          node scripts/configure-android-release.mjs android
+          node scripts/generate-app-icons.mjs android
+          node scripts/verify-release-assets.mjs android
+      - name: Assemble Android debug APK and unsigned release bundle
         working-directory: platforms/android/android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDebug bundleRelease --no-daemon
       - uses: actions/upload-artifact@v4
         with:
           name: iptv-android-debug-apk
           path: platforms/android/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iptv-android-release-aab-unsigned
+          path: platforms/android/android/app/build/outputs/bundle/release/*.aab
           if-no-files-found: error
 
   android_tv:
@@ -145,13 +178,23 @@ jobs:
           npx cap sync android
       - name: Add TV launcher and Leanback support
         run: node scripts/patch-android-tv.mjs
-      - name: Assemble Android TV debug APK
+      - name: Configure Android TV release metadata and icon
+        run: |
+          node scripts/configure-android-release.mjs android-tv
+          node scripts/generate-app-icons.mjs android-tv
+          node scripts/verify-release-assets.mjs android-tv
+      - name: Assemble Android TV debug APK and unsigned release bundle
         working-directory: platforms/android-tv/android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDebug bundleRelease --no-daemon
       - uses: actions/upload-artifact@v4
         with:
           name: iptv-android-tv-debug-apk
           path: platforms/android-tv/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iptv-android-tv-release-aab-unsigned
+          path: platforms/android-tv/android/app/build/outputs/bundle/release/*.aab
           if-no-files-found: error
 
   ios:
@@ -176,6 +219,10 @@ jobs:
         run: |
           npx cap add ios
           npx cap sync ios
+      - name: Generate and verify iOS app icon
+        run: |
+          node scripts/generate-app-icons.mjs ios
+          node scripts/verify-release-assets.mjs ios
       - name: Compile simulator app without code signing
         working-directory: platforms/ios
         run: |
