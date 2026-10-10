@@ -9,7 +9,8 @@
     "preview": "vite preview --host 0.0.0.0",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
-    "sync:catalog": "tsx scripts/sync-catalog.ts"
+    "sync:catalog": "tsx scripts/sync-catalog.ts",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "hls.js": "^1.6.0",
@@ -23,6 +24,7 @@
     "@vitejs/plugin-react": "^4.5.0",
     "tsx": "^4.20.0",
     "typescript": "^5.8.0",
-    "vite": "^6.3.0"
+    "vite": "^6.3.0",
+    "@playwright/test": "^1.56.0"
   }
 }
