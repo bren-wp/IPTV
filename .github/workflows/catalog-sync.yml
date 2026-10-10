@@ -2,7 +2,7 @@ name: IPTV Catalog Sync
 
 on:
   schedule:
-    - cron: '19 */6 * * *'
+    - cron: '19 * * * *'
   push:
     branches: [main]
     paths:
@@ -45,4 +45,5 @@ jobs:
             exit 0
           fi
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "chore(catalog): synchronize upstream IPTV directory"
-          git push
+          git pull --rebase origin main
+          git push origin HEAD:main
