@@ -257,6 +257,69 @@ jobs:
           path: platforms/ios/build-ios/Build/Products/Debug-iphonesimulator/App.app/
           if-no-files-found: error
 
+  windows:
+    name: Windows Setup + Portable EXE and launch smoke
+    needs: web
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install shared player dependencies
+        working-directory: apps/player
+        run: npm install --no-audit --no-fund
+      - name: Build the shared Windows player
+        working-directory: apps/player
+        run: |
+          npm run typecheck
+          npm test
+          npm run build
+      - name: Stage and validate Windows assets
+        run: |
+          node scripts/prepare-platform.mjs windows
+          node scripts/generate-app-icons.mjs windows
+          node scripts/verify-release-assets.mjs windows
+      - name: Install Windows desktop dependencies
+        working-directory: platforms/windows
+        run: npm install --no-audit --no-fund
+      - name: Verify unpackaged Windows app launches and displays UI
+        working-directory: platforms/windows
+        run: npm run smoke
+      - name: Build Windows Setup and Portable EXEs
+        working-directory: platforms/windows
+        run: npm run build:win
+      - name: Verify Windows installers and portable launch
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $setup = 'platforms/windows/outputs/IPTV-Setup-0.4.0.exe'
+          $portable = 'platforms/windows/outputs/IPTV-Portable-0.4.0.exe'
+          foreach ($file in @($setup, $portable)) {
+            if (!(Test-Path $file) -or (Get-Item $file).Length -lt 10000000) {
+              throw "Missing or unexpectedly small Windows EXE: $file"
+            }
+          }
+          $process = Start-Process -FilePath (Resolve-Path $portable) -ArgumentList '--smoke-test' -PassThru
+          try {
+            if (!$process.WaitForExit(60000)) {
+              Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+              throw 'Portable Windows EXE launch timed out.'
+            }
+            if ($process.ExitCode -ne 0) { throw "Portable Windows EXE smoke exited with $($process.ExitCode)" }
+          } finally {
+            if (!$process.HasExited) { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue }
+          }
+          Get-FileHash -Algorithm SHA256 $setup,$portable | Format-Table
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iptv-windows-setup-and-portable
+          path: |
+            platforms/windows/outputs/IPTV-Setup-0.4.0.exe
+            platforms/windows/outputs/IPTV-Portable-0.4.0.exe
+          if-no-files-found: error
+
   publish_preview:
     name: Publish v0.4.0 GitHub Preview Release
     if: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}

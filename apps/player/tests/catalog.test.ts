@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildCatalog, filterChannels, isCatalog, loadCachedCatalog, safeMediaUrl, loadCatalog } from '../src/catalog.ts';
+import { buildCatalog, filterChannels, isCatalog, loadCachedCatalog, safeMediaUrl, loadCatalog, retainReviewedStreams } from '../src/catalog.ts';
 
 const metadata = [
   { id: 'Alpha.hr', name: 'Alpha TV', country: 'HR', categories: ['news'], is_nsfw: false },
@@ -104,4 +104,18 @@ test('live catalog still refreshes when newer AbortSignal helpers are unavailabl
     if (any) Object.defineProperty(AbortSignal, 'any', any);
     if (timeout) Object.defineProperty(AbortSignal, 'timeout', timeout);
   }
+});
+
+test('keeps safe reviewed GitHub streams through direct refresh and drops invalid/unknown alternatives',()=>{
+  const live=buildCatalog(metadata,streams,[]);
+  const cached=buildCatalog(metadata,[
+    {channel:'Alpha.hr',url:'https://example.com/live.m3u8'},
+    {channel:'Alpha.hr',url:'https://extra.example.com/channel.m3u8',source:'github:public-github-playlist'},
+    {channel:'Alpha.hr',url:'https://invalid.example.com/ignored.m3u8',source:'github:malformed source'},
+    {channel:'Unknown.hr',url:'https://extra.example.com/unknown.m3u8',source:'github:public-github-playlist'}
+  ],[]);
+  retainReviewedStreams(live,cached);
+  assert.equal(live.channels.length,1);
+  assert.equal(live.channels[0].streams.length,2);
+  assert.equal(live.channels[0].streams[1].source,'github:public-github-playlist');
 });

@@ -10,5 +10,6 @@ The same application logic lives in [`apps/player`](../apps/player). Each platfo
 | `samsung-tizen/` | Samsung TV staging directory |
 | `lg-webos/` | LG TV staging directory |
 | `web/` | Production browser bundle |
+| `windows/` | Desktop Setup EXE and Portable EXE |
 
-The staging directories are not signed TV Store artifacts. Store binaries require appropriate SDKs, valid identities and physical-device certification.
+Windows evaluation executables are not Authenticode-signed. The staging directories are not signed TV Store artifacts. Store binaries require appropriate SDKs, valid identities and physical-device certification.

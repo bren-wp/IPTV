@@ -8,6 +8,7 @@ export interface Stream {
   quality: string | null;
   labels: string[];
   requiresHeaders: boolean;
+  source?: string; // Additional playlist provenance; absent for primary directory.
 }
 export interface GuideSource {
   url: string;
@@ -107,7 +108,9 @@ export function buildCatalog(
     channel.streams.push({
       url, title: str(raw.title) ?? channel.name, quality: str(raw.quality),
       labels: strings(raw.labels ?? (raw.label ? [raw.label] : [])),
-      requiresHeaders: Boolean(str(raw.referrer ?? raw.http_referrer) || str(raw.user_agent))
+      requiresHeaders: Boolean(str(raw.referrer ?? raw.http_referrer) || str(raw.user_agent)),
+      ...(typeof raw.source === 'string' && /^github:[a-z0-9-]{2,60}$/.test(raw.source)
+        ? { source: raw.source } : {})
     });
   }
 
@@ -154,6 +157,24 @@ export function isCatalog(value: unknown): value is Catalog {
       isRecord(g) && Boolean(safeMediaUrl(g.url)) && g.format === 'XML' &&
       typeof g.site === 'string' && typeof g.siteId === 'string')))
   );
+}
+
+/** Merge only validated, additional-source stream URLs from the last server snapshot. */
+export function retainReviewedStreams(live: Catalog, snapshot: Catalog | null): Catalog {
+  if (!snapshot || !isCatalog(snapshot)) return live;
+  const previous = new Map(snapshot.channels.map(ch=>[ch.id,ch]));
+  for (const channel of live.channels) {
+    const prior = previous.get(channel.id);
+    if (!prior) continue;
+    const seen = new Set(channel.streams.map(stream=>stream.url));
+    for (const stream of prior.streams) {
+      if (!stream.source?.startsWith('github:') || !safeMediaUrl(stream.url) || seen.has(stream.url) ||
+          channel.streams.length >= 16) continue;
+      channel.streams.push(stream);
+      seen.add(stream.url);
+    }
+  }
+  return live;
 }
 
 export function filterChannels(
@@ -208,6 +229,10 @@ export async function loadCatalog(signal?: AbortSignal): Promise<{ catalog: Cata
     ]);
     const catalog = buildCatalog(channels, streams, logos, guides);
     if (catalog.channels.length === 0) throw new Error('No channels were returned.');
+    // The GitHub Actions feed adds explicitly reviewed optional streams to the
+    // bundled snapshot, without requiring every client to fetch GitHub M3U files.
+    const snapshot = await fetchJson(CACHE_PATH).catch(() => null);
+    retainReviewedStreams(catalog, isCatalog(snapshot) ? snapshot : null);
     catalog.updatedAt = new Date().toISOString();
     return { catalog, isFallback: false };
   } catch (error) {

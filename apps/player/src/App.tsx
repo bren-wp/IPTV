@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Channel, Catalog } from './catalog';
 import { filterChannels, loadCachedCatalog, loadCatalog } from './catalog';
+import { newestCatalog, readStoredCatalog, saveStoredCatalog } from './catalog-storage';
 import { channelsForView, formatChannelCount, recommendedChannels, VIEW_LABELS } from './navigation';
 import type { View } from './navigation';
 import Player from './Player';
 import EpgGuide from './EpgGuide';
 
-const REFRESH_MS = 60 * 60 * 1000;
+const REFRESH_MS = 15 * 60 * 1000; // Check for new playlist metadata each quarter-hour.
 const PAGE_SIZE = 48;
 const FAVORITES_KEY = 'iptv:favorites:v1';
 const RECENT_KEY = 'iptv:recent:v1';
@@ -130,17 +131,27 @@ export default function App(){
   const [guideOpen,setGuideOpen]=useState(false);
   const [page,setPage]=useState(1);
   const playerRef=useRef<HTMLElement|null>(null);
+  const inFlightRef=useRef(false);
+  const lastAttemptRef=useRef(0);
 
   const refresh=useCallback(async(signal?:AbortSignal)=>{
+    if(inFlightRef.current || signal?.aborted)return;
+    inFlightRef.current=true;
+    lastAttemptRef.current=Date.now();
     setRefreshing(true);
     try {
       const result=await loadCatalog(signal);
       if(signal?.aborted)return;
-      setCatalog(result.catalog);setFallback(result.isFallback);setError('');
+      // Never overwrite a newer in-memory result with an older bundled fallback.
+      setCatalog(previous=>result.isFallback?newestCatalog(previous,result.catalog):result.catalog);
+      setFallback(result.isFallback);
+      setError('');
+      if(!result.isFallback) void saveStoredCatalog(result.catalog);
     } catch(e) {
       if(signal?.aborted)return;
       setError(e instanceof Error?e.message:'Channel directory is temporarily unavailable.');
     } finally {
+      inFlightRef.current=false;
       if(!signal?.aborted){setLoading(false);setRefreshing(false);}
     }
   },[]);
@@ -148,13 +159,33 @@ export default function App(){
     const controller=new AbortController();
     void(async()=>{
       try {
-        const saved=await loadCachedCatalog(controller.signal);
-        if(saved&&!controller.signal.aborted){setCatalog(saved);setFallback(true);setLoading(false);}
-      }catch{/* Navigating away cancels the request. */}
+        const [bundled,stored]=await Promise.all([
+          loadCachedCatalog(controller.signal), readStoredCatalog()
+        ]);
+        const cached=newestCatalog(bundled,stored);
+        if(cached&&!controller.signal.aborted){
+          setCatalog(cached);setFallback(true);setLoading(false);
+        }
+      }catch{/* Network access may be cancelled when navigating away. */}
       if(!controller.signal.aborted)await refresh(controller.signal);
     })();
-    const timer=window.setInterval(()=>{if(autoSync&&document.visibilityState==='visible')void refresh(controller.signal);},REFRESH_MS);
-    return ()=>{controller.abort();window.clearInterval(timer);};
+    // Visibility, network reconnection and a low-cost timer complement the
+    // server-side hourly sync. Offline and hidden apps do not hammer hosts.
+    const check=()=>{
+      if(controller.signal.aborted||!autoSync||document.visibilityState!=='visible'||
+         navigator.onLine===false||Date.now()-lastAttemptRef.current<REFRESH_MS)return;
+      void refresh(controller.signal);
+    };
+    const timer=window.setInterval(check,60_000);
+    document.addEventListener('visibilitychange',check);
+    window.addEventListener('online',check);
+    window.addEventListener('focus',check);
+    return ()=>{
+      controller.abort();window.clearInterval(timer);
+      document.removeEventListener('visibilitychange',check);
+      window.removeEventListener('online',check);
+      window.removeEventListener('focus',check);
+    };
   },[refresh,autoSync]);
 
   const channels=catalog?.channels??[];
@@ -304,7 +335,7 @@ export default function App(){
           <p>Personalize your directory and playback discovery. These preferences stay on this device.</p>
           <div className="settings-card"><div><h2>Preferred region</h2><p>Show channels from this country first on Home.</p></div>
             <select aria-label="Preferred region" value={preferredCountry} onChange={e=>setRegion(e.target.value)}>{[...new Set([preferredCountry,...countries])].map(c=><option key={c} value={c}>{countryName(c)}</option>)}</select></div>
-          <div className="settings-card"><div><h2>Automatic channel refresh</h2><p>Check for updates approximately every hour while the app is open.</p></div>
+          <div className="settings-card"><div><h2>Automatic channel refresh</h2><p>Check for playlist updates approximately every 15 minutes while online and the app is visible.</p></div>
             <button type="button" role="switch" aria-checked={autoSync} onClick={toggleAutoSync} className={'toggle-switch'+(autoSync?' enabled':'')} aria-label="Automatic channel refresh"><span/></button></div>
           <div className="settings-card"><div><h2>Update channel directory</h2><p>{catalog?.updatedAt?'Last loaded: '+new Date(catalog.updatedAt).toLocaleString():'No catalog loaded yet.'}</p></div>
             <button type="button" className="outline-button" onClick={()=>void refresh()} disabled={refreshing}><Icon name="refresh" size={17}/>{refreshing?'Refreshing':'Refresh now'}</button></div>

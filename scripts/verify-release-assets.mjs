@@ -4,8 +4,8 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const target = process.argv[2];
-if (!['web', 'lg-webos', 'samsung-tizen', 'ios', 'android', 'android-tv'].includes(target)) {
-  console.error('Usage: node scripts/verify-release-assets.mjs [platform]');
+if (!['web', 'lg-webos', 'samsung-tizen', 'ios', 'android', 'android-tv', 'windows'].includes(target)) {
+  console.error('Usage: node scripts/verify-release-assets.mjs [platform including windows]');
   process.exit(2);
 }
 async function png(path, expectedSize) {
@@ -42,6 +42,16 @@ if (target === 'samsung-tizen') {
   await png(join(web, 'icon.png'), 117);
 }
 if (target === 'web') await png(join(web, 'icon.png'), 192);
+if (target === 'windows') {
+  await nonEmpty(join(web, 'index.html'));
+  await nonEmpty(join(web, 'catalog.json'));
+  await png(join(base, 'assets/icon.png'), 256);
+  const ico = await readFile(join(base, 'assets/icon.ico'));
+  if (ico.length < 250 || ico.readUInt16LE(2) !== 1 || ico.readUInt16LE(4) !== 1 ||
+      ico.readUInt32LE(18) !== 22 || ico.readUInt32LE(14) !== ico.length - 22) {
+    throw new Error('Windows icon container is invalid.');
+  }
+}
 if (target === 'ios') await png(join(base, 'ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png'), 1024);
 if (target === 'android' || target === 'android-tv') {
   const gradle = await readFile(join(base, 'android/app/build.gradle'), 'utf8');
