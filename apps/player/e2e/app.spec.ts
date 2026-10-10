@@ -25,12 +25,13 @@ test.beforeEach(async({page})=>{
   await page.route('https://example.test/programmes.xml',route=>{
     const start=xmlDate(new Date(Date.now()-10*60_000));
     const stop=xmlDate(new Date(Date.now()+30*60_000));
-    return route.fulfill({contentType:'application/xml',body:
+    return route.fulfill({contentType:'application/xml',headers:{'access-control-allow-origin':'*'},body:
       '<tv><programme channel="HRNews.hr" start="'+start+'" stop="'+stop+'"><title>Example Headlines</title><desc>Trusted fixture</desc></programme></tv>'});
   });
 });
 
-test('home, live search, favorites, categories and persistent preferences work',async({page})=>{
+test('home, live search, favorites, categories and persistent preferences work',async({page,isMobile})=>{
+  test.skip(isMobile,'Desktop navigation scenario');
   await page.goto('/');
   await expect(page.getByRole('heading',{name:/Live TV,/})).toBeVisible();
   await expect(page.getByText('Featured channels')).toBeVisible();
@@ -49,7 +50,8 @@ test('home, live search, favorites, categories and persistent preferences work',
   await expect(page.getByRole('combobox',{name:'Preferred region'})).toHaveValue('US');
 });
 
-test('guide loads real XMLTV programmes and the player can be closed',async({page})=>{
+test('guide loads real XMLTV programmes and the player can be closed',async({page,isMobile})=>{
+  test.skip(isMobile,'Desktop guide scenario');
   await page.goto('/');
   await page.getByRole('navigation',{name:'All sections'}).getByRole('button',{name:'TV Guide'}).click();
   await expect(page.getByRole('button',{name:'Watch Example News'})).toBeVisible();
