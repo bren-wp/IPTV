@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Channel, Catalog } from './catalog';
 import { filterChannels, loadCatalog } from './catalog';
 import Player from './Player';
+import EpgGuide from './EpgGuide';
 
 const REFRESH_MS = 60 * 60 * 1000;
 const PAGE_SIZE = 120;
@@ -71,6 +72,7 @@ export default function App() {
   const [favorites, setFavorites] = useState<Set<string>>(savedFavorites);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [streamIndex, setStreamIndex] = useState(0);
+  const [guideOpen, setGuideOpen] = useState(false);
   const [page, setPage] = useState(1);
 
   const refresh = useCallback(async (signal?: AbortSignal) => {
@@ -122,6 +124,7 @@ export default function App() {
   const selectChannel = (channel: Channel) => {
     setSelectedId(channel.id);
     setStreamIndex(0);
+    setGuideOpen(false);
   };
 
   return (
@@ -157,13 +160,16 @@ export default function App() {
           {selected && stream && (
             <section className="now-playing" aria-label="Now playing">
               <div className="section-heading"><div><p className="eyebrow">NOW WATCHING</p><h2>{selected.name}</h2></div>
-                <button className="text-button" type="button" onClick={() => setSelectedId(null)}>Close player ✕</button></div>
+                <button className="text-button" type="button" onClick={() => { setSelectedId(null); setGuideOpen(false); }}>Close player ✕</button></div>
               <Player key={selected.id + ':' + streamIndex} stream={stream} channelName={selected.name}
                 onNextStream={() => setStreamIndex(i => (i + 1) % selected.streams.length)}
                 hasNextStream={selected.streams.length > 1} />
               <div className="player-toolbar">
                 <span>{countryName(selected.country)} {selected.categories.length ? '· ' + selected.categories.join(', ') : ''}</span>
                 <div className="player-actions">
+                  <button className="text-button" type="button" aria-expanded={guideOpen} onClick={() => setGuideOpen(open => !open)}>
+                    {guideOpen ? 'Hide TV guide' : 'TV guide'} {selected.guides?.length ? '(' + selected.guides.length + ')' : ''}
+                  </button>
                   <button className="text-button" type="button" aria-pressed={favorites.has(selected.id)} onClick={() => toggleFavorite(selected.id)}>
                     {favorites.has(selected.id) ? '♥ Favorited' : '♡ Add to favorites'}
                   </button>
@@ -177,6 +183,7 @@ export default function App() {
                   )}
                 </div>
               </div>
+              {guideOpen && <EpgGuide key={selected.id} channel={selected} />}
             </section>
           )}
 
