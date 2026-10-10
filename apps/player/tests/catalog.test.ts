@@ -44,3 +44,23 @@ test('does not accept malformed upstream payloads', () => {
   assert.throws(() => buildCatalog({}, [], []));
   assert.equal(isCatalog({ version: 1, channels: [{ streams: [] }] }), false);
 });
+
+test('rejects internal, reserved and private hostnames to prevent requests into local networks', () => {
+  for (const url of [
+    'http://127.0.0.1/control',
+    'http://localhost/',
+    'https://router.local/admin',
+    'https://device.internal/live',
+    'http://10.0.0.5/stream',
+    'http://172.31.255.3/stream',
+    'http://192.168.1.1/stream',
+    'http://169.254.169.254/metadata',
+    'http://100.100.100.100/stream',
+    'http://[::1]/stream',
+    'http://[fe80::1]/stream',
+    'http://[fc00::1]/stream'
+  ]) {
+    assert.equal(safeMediaUrl(url), null, url);
+  }
+  assert.equal(safeMediaUrl('https://8.8.8.8/video.m3u8'), 'https://8.8.8.8/video.m3u8');
+});
