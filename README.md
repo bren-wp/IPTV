@@ -10,7 +10,7 @@
 [![Platform builds](https://github.com/bren-wp/IPTV/actions/workflows/player-ci.yml/badge.svg)](https://github.com/bren-wp/IPTV/actions/workflows/player-ci.yml)
 [![Catalog updates](https://github.com/bren-wp/IPTV/actions/workflows/catalog-sync.yml/badge.svg)](https://github.com/bren-wp/IPTV/actions/workflows/catalog-sync.yml)
 
-**Android · iOS · Android TV · Samsung Smart TV · LG Smart TV · Web**
+**Android · iOS · Android TV · Samsung Smart TV · LG Smart TV · Web · Windows**
 
 </div>
 
@@ -41,7 +41,7 @@ The channel tiles reflect actual live streams and their metadata. Movies and Ser
 ### Thoughtful by design
 
 - **Beautiful dark interface.** Spacious cards, clean typography, accessible controls and adaptive layouts.
-- **Live, not stale.** Scheduled directory updates plus automatic refresh while the application is open.
+- **Live, not stale.** Hourly scheduled directory synchronization, in-app checks about every 15 minutes, and refresh on reconnect or window focus. The newest verified directory is also retained locally for offline startup.
 - **Your channels, your way.** Store favorites locally without account creation.
 - **More context.** Optional programme guide with *on now* and *up next* information.
 - **Resilient by default.** Multiple stream choices where available, URL validation, error handling and cached directory fallback.
@@ -59,6 +59,7 @@ Each delivery target has a dedicated directory with its own configuration and pa
 | Samsung Tizen | [`platforms/samsung-tizen/`](platforms/samsung-tizen/) | Dedicated TV web bundle and manifest; signed WGT pending |
 | LG webOS | [`platforms/lg-webos/`](platforms/lg-webos/) | Separate packageable IPK CI with platform icon assets; device/store QA pending |
 | Web | [`platforms/web/`](platforms/web/) | Production static bundle built in CI |
+| Windows 10/11 | [`platforms/windows/`](platforms/windows/) | Separate Setup EXE and Portable EXE builds, with launcher smoke tests |
 
 > **Development status:** The web interface, Android debug APK and unsigned iOS simulator builds are compiled in CI. Platform signing, Smart TV certification, real-device quality assurance and content-rights review are not complete. A successful build is not a guarantee that a remote channel will play.
 
@@ -74,7 +75,8 @@ IPTV/
 │   ├── android-tv/         Android TV app and Leanback integration
 │   ├── samsung-tizen/      Samsung TV web bundle and Tizen manifest
 │   ├── lg-webos/           LG TV web bundle and webOS app metadata
-│   └── web/                Independent browser build
+│   ├── web/                Independent browser build
+│   └── windows/            Secure desktop app + Setup/Portable EXE
 ├── scripts/                Platform bundling and Android TV configuration
 └── .github/workflows/      Platform CI and scheduled directory updates
 ```
@@ -103,7 +105,7 @@ npm run dev
 Prepare the separate platform bundles (run after the shared web build):
 
 ```bash
-node scripts/prepare-platform.mjs web android ios android-tv lg-webos samsung-tizen
+node scripts/prepare-platform.mjs web android ios android-tv lg-webos samsung-tizen windows
 ```
 
 ### Mobile and Android TV builds
@@ -123,13 +125,28 @@ For iOS, follow the same workflow in `platforms/ios/`, using `npx cap add ios` /
 
 For Android TV, use `platforms/android-tv/`, then run `node ../../scripts/patch-android-tv.mjs` after `npx cap add android`, before Gradle compilation.
 
+### Windows desktop
+
+The dedicated [Windows directory](platforms/windows/) produces a standard Setup EXE and a Portable EXE using the same player UI. Its Electron renderer is sandboxed, keeps Chromium web security enabled, and does not expose Node.js APIs to streamed pages.
+
+```bash
+cd apps/player && npm install && npm run build && cd ../..
+node scripts/prepare-platform.mjs windows
+node scripts/generate-app-icons.mjs windows
+node scripts/verify-release-assets.mjs windows
+npm install --prefix platforms/windows
+npm --prefix platforms/windows run build:win
+```
+
+Windows installation and portable launch are checked by GitHub Actions. These binaries are unsigned evaluation builds until Authenticode signing and real-device review are completed.
+
 ### Smart TV and web builds
 
 The platform bundler prepares `platforms/samsung-tizen/staging/`, `platforms/lg-webos/staging/` and `platforms/web/dist/`. Samsung `.wgt` packaging requires Tizen Studio and a valid Samsung certificate. LG `.ipk` packaging is automated in CI with the current webOS CLI and mandatory icon assets; TV Seller Lounge acceptance and physical-device QA remain pending.
 
 ## Automatic catalog updates
 
-Channel metadata is refreshed in-app and synchronized on the GitHub default branch every six hours. The update job validates the generated directory and avoids committing identical output. The last valid snapshot is retained if the upstream service fails. Video is played directly from the third-party providers; this repository does not host or rebroadcast TV streams.
+Channel metadata is checked in-app around every 15 minutes while online and visible, plus immediately after the app regains focus or connectivity when a refresh is due. The directory snapshot is synchronized on the GitHub default branch every hour (subject to GitHub's scheduler delays). Last known good data is retained across sessions; external links may still be unavailable. The update job validates the generated directory and avoids committing identical output. The last valid snapshot is retained if the upstream service fails. Video is played directly from the third-party providers; this repository does not host or rebroadcast TV streams.
 
 **Note:** Schedules and streams depend on the broadcaster. Some channels may be unavailable, restricted geographically, DRM-protected or incompatible with particular devices.
 
