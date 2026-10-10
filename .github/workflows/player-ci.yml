@@ -5,10 +5,12 @@ on:
     branches: [main, 'feature/**']
     paths:
       - 'apps/player/**'
+      - '!apps/player/public/catalog.json'
       - '.github/workflows/player-ci.yml'
   pull_request:
     paths:
       - 'apps/player/**'
+      - '!apps/player/public/catalog.json'
       - '.github/workflows/player-ci.yml'
   workflow_dispatch:
 
