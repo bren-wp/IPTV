@@ -1,6 +1,6 @@
 # Production distribution and release checklist
 
-This document is for maintainers preparing the **0.3.0** release. The source tree includes separate Android, Android TV, iOS, web, Samsung Tizen and LG webOS configurations. Successful compilation does **not** establish platform approval, broadcaster rights or reliable playback on every target device.
+This document is for maintainers preparing the **0.4.0** release. The source tree includes separate Android, Android TV, iOS, web, Samsung Tizen and LG webOS configurations. Successful compilation does **not** establish platform approval, broadcaster rights or reliable playback on every target device.
 
 ## Release gates
 
