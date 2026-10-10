@@ -58,7 +58,7 @@ export function safeMediaUrl(value: unknown): string | null {
           ip.startsWith('fe8') || ip.startsWith('fe9') || ip.startsWith('fea') ||
           ip.startsWith('feb') || ip.startsWith('::ffff:')) return null;
     }
-    if (/^\\d+\\.\\d+\\.\\d+\\.\\d+$/.test(host)) {
+    if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) {
       const [first, second] = host.split('.').map(Number);
       if (first === 0 || first === 10 || first === 127 || first >= 224 ||
           (first === 100 && second >= 64 && second <= 127) ||
