@@ -9,9 +9,9 @@ Cross-platform live-TV directory and player built around the publicly available 
 | Target | Current implementation |
 | --- | --- |
 | Modern web browsers | React + TypeScript + Vite interface, native video and HLS.js playback |
-| Android phones and tablets | Capacitor configuration + automated debug APK build on CI |
+| Android phones and tablets | Capacitor configuration + automated debug APK build on CI (compiled; device QA pending) |
 | Android TV / Google TV | Responsive web UI and keyboard/remote directional focus handling; platform certification and real-device QA pending |
-| iPhone / iPad | Capacitor project configuration; Xcode build, signing and real-device QA pending |
+| iPhone / iPad | Capacitor configuration + unsigned iOS Simulator CI build; device signing and real-device QA pending |
 | Samsung Tizen / LG webOS | TV-friendly browser UI; store packages, platform APIs and real-device QA pending |
 
 ### Features
@@ -57,7 +57,7 @@ The initial committed snapshot is intentionally empty; the running application l
 
 ### Android
 
-The `IPTV Player CI` workflow builds an **unsigned debug/test APK** and uploads it as a workflow artifact. It is not a production-signed Play Store release. The native project is generated during CI:
+The `IPTV Player CI` workflow builds a **debug-signed test APK** and uploads it as a workflow artifact. It is not a production-signed Play Store release. The native project is generated during CI:
 
 ```sh
 cd apps/player
@@ -67,7 +67,7 @@ npx cap add android
 npx cap sync android
 ```
 
-Production Android releases require signing keys, release configuration, target-device tests, store policy review and additional CI hardening. For iOS, use a Mac with Xcode to generate/sync the Capacitor project; Apple signing, entitlements and distribution setup remain required.
+Production Android releases require signing keys, release configuration, target-device tests, store policy review and additional CI hardening. The CI also builds an unsigned iOS Simulator app on macOS; this simulator artifact is not an installable, device-signed IPA. For device distribution use a Mac with Xcode and configure Apple signing, entitlements, device tests and distribution.
 
 ### IPTV-org integration
 
