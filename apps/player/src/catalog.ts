@@ -185,11 +185,20 @@ export async function loadCachedCatalog(signal?: AbortSignal): Promise<Catalog |
 /** The app can refresh without a new release; generated same-origin snapshot remains a fallback. */
 export async function loadCatalog(signal?: AbortSignal): Promise<{ catalog: Catalog; isFallback: boolean }> {
   const fetchJson = async (path: string): Promise<unknown> => {
-    const timeout = AbortSignal.timeout(20_000);
-    const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
-    const response = await fetch(path, { signal: combined, cache: 'no-store' });
-    if (!response.ok) throw new Error('Catalog request failed (' + response.status + ').');
-    return response.json();
+    // AbortSignal.any/timeout are missing on several older Smart TV WebKit engines.
+    const controller = new AbortController();
+    const cancel = (): void => controller.abort();
+    const timeout = setTimeout(cancel, 20_000);
+    signal?.addEventListener('abort', cancel, { once: true });
+    if (signal?.aborted) cancel();
+    try {
+      const response = await fetch(path, { signal: controller.signal, cache: 'no-store' });
+      if (!response.ok) throw new Error('Catalog request failed (' + response.status + ').');
+      return await response.json();
+    } finally {
+      clearTimeout(timeout);
+      signal?.removeEventListener('abort', cancel);
+    }
   };
   try {
     const [channels, streams, logos, guides] = await Promise.all([
