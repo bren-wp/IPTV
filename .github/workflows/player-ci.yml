@@ -13,6 +13,7 @@ on:
       - 'scripts/configure-android-release.mjs'
       - 'scripts/verify-release-assets.mjs'
       - '.github/workflows/player-ci.yml'
+      - '.github/workflows/release-distributions.yml'
   pull_request:
     paths:
       - 'apps/player/**'
@@ -24,6 +25,7 @@ on:
       - 'scripts/configure-android-release.mjs'
       - 'scripts/verify-release-assets.mjs'
       - '.github/workflows/player-ci.yml'
+      - '.github/workflows/release-distributions.yml'
   workflow_dispatch:
 
 permissions:
@@ -41,6 +43,9 @@ jobs:
       - name: Install player dependencies
         working-directory: apps/player
         run: npm install --no-audit --no-fund
+      - name: Check production dependencies for reported high severity vulnerabilities
+        working-directory: apps/player
+        run: npm audit --omit=dev --audit-level=high
       - name: Typecheck
         working-directory: apps/player
         run: npm run typecheck
