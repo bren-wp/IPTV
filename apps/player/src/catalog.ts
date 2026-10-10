@@ -169,6 +169,19 @@ export function filterChannels(
   );
 }
 
+/** Load the bundled verified snapshot before accessing any external service. */
+export async function loadCachedCatalog(signal?: AbortSignal): Promise<Catalog | null> {
+  try {
+    const response = await fetch(CACHE_PATH, { signal, cache: 'no-store' });
+    if (!response.ok) return null;
+    const value: unknown = await response.json();
+    return isCatalog(value) && value.channels.length > 0 ? value : null;
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    return null;
+  }
+}
+
 /** The app can refresh without a new release; generated same-origin snapshot remains a fallback. */
 export async function loadCatalog(signal?: AbortSignal): Promise<{ catalog: Catalog; isFallback: boolean }> {
   const fetchJson = async (path: string): Promise<unknown> => {
