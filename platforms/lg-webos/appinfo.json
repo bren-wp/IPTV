@@ -1,10 +1,12 @@
 {
   "id": "com.brendigo.iptv.webos",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "vendor": "Brendigo",
   "type": "web",
   "main": "index.html",
   "title": "IPTV",
   "resolution": "1920x1080",
-  "disableBackHistoryAPI": false
+  "disableBackHistoryAPI": false,
+  "icon": "icon.png",
+  "largeIcon": "largeicon.png"
 }
