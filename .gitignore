@@ -17,3 +17,6 @@ platforms/*/ios/
 platforms/*/build-ios/
 platforms/*/build/
 platforms/*/outputs/
+
+# Generated Windows installer icon; reproducible via scripts/generate-app-icons.mjs
+platforms/windows/assets/
