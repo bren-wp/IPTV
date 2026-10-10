@@ -7,3 +7,13 @@ apps/player/ios/
 apps/player/.DS_Store
 apps/player/public/catalog.json.tmp
 *.log
+
+# Independently generated native and Smart TV platform builds
+platforms/*/node_modules/
+platforms/*/dist/
+platforms/*/staging/
+platforms/*/android/
+platforms/*/ios/
+platforms/*/build-ios/
+platforms/*/build/
+platforms/*/outputs/
