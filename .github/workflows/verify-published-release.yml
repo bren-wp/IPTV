@@ -11,12 +11,12 @@ permissions:
 
 jobs:
   verify_release:
-    name: Validate v0.5.0 files, archives and SHA-256 digests
+    name: Validate v0.5.1 files, archives and SHA-256 digests
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
       GH_TOKEN: ${{ github.token }}
-      TAG: v0.5.0
+      TAG: v0.5.1
     steps:
       - uses: actions/checkout@v4
       - name: Confirm a real published prerelease and exact package list
@@ -27,16 +27,16 @@ jobs:
             --jq '{tag:.tagName,prerelease:.isPrerelease,commit:.targetCommitish,files:[.assets[].name]}'
           test "$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isPrerelease --jq .isPrerelease)" = true
           cat > expected.txt <<'EXPECTED'
-          IPTV-v0.5.0-Android-debug.apk
-          IPTV-v0.5.0-Android-release-UNSIGNED.aab
-          IPTV-v0.5.0-AndroidTV-debug.apk
-          IPTV-v0.5.0-AndroidTV-release-UNSIGNED.aab
-          IPTV-v0.5.0-iOS-Simulator-UNSIGNED.zip
-          IPTV-v0.5.0-LG-webOS.ipk
-          IPTV-v0.5.0-Samsung-Tizen-STAGING.zip
-          IPTV-v0.5.0-Web.zip
-          IPTV-Setup-0.5.0.exe
-          IPTV-Portable-0.5.0.exe
+          IPTV-v0.5.1-Android-debug.apk
+          IPTV-v0.5.1-Android-release-UNSIGNED.aab
+          IPTV-v0.5.1-AndroidTV-debug.apk
+          IPTV-v0.5.1-AndroidTV-release-UNSIGNED.aab
+          IPTV-v0.5.1-iOS-Simulator-UNSIGNED.zip
+          IPTV-v0.5.1-LG-webOS.ipk
+          IPTV-v0.5.1-Samsung-Tizen-STAGING.zip
+          IPTV-v0.5.1-Web.zip
+          IPTV-Setup-0.5.1.exe
+          IPTV-Portable-0.5.1.exe
           SHA256SUMS.txt
           EXPECTED
           sort -o expected.txt expected.txt
@@ -57,12 +57,12 @@ jobs:
           cd verify
           sha256sum --check SHA256SUMS.txt
           for file in *.apk *.aab *.zip; do unzip -tq "$file" >/dev/null; done
-          test -s IPTV-v0.5.0-LG-webOS.ipk
-          for exe in IPTV-Setup-0.5.0.exe IPTV-Portable-0.5.0.exe; do
+          test -s IPTV-v0.5.1-LG-webOS.ipk
+          for exe in IPTV-Setup-0.5.1.exe IPTV-Portable-0.5.1.exe; do
             test -s "$exe"
             test "$(stat -c '%s' "$exe")" -gt 10000000
           done
-          unzip -Z1 IPTV-v0.5.0-Web.zip | grep -qx 'index.html'
-          unzip -Z1 IPTV-v0.5.0-Samsung-Tizen-STAGING.zip | grep -qx 'config.xml'
-          unzip -Z1 IPTV-v0.5.0-iOS-Simulator-UNSIGNED.zip | grep -qx 'App.app/Info.plist'
-          echo "Verified all ten published v0.5.0 platform packages and checksum manifest."
+          unzip -Z1 IPTV-v0.5.1-Web.zip | grep -qx 'index.html'
+          unzip -Z1 IPTV-v0.5.1-Samsung-Tizen-STAGING.zip | grep -qx 'config.xml'
+          unzip -Z1 IPTV-v0.5.1-iOS-Simulator-UNSIGNED.zip | grep -qx 'App.app/Info.plist'
+          echo "Verified all ten published v0.5.1 platform packages and checksum manifest."
