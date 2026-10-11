@@ -412,7 +412,8 @@ jobs:
           for archive in release/*.apk release/*.aab release/*.zip; do
             unzip -tq "$archive" >/dev/null
           done
-          (cd release && sha256sum IPTV-v0.5.1-* > SHA256SUMS.txt)
+          (cd release && sha256sum IPTV-v0.5.1-* IPTV-Setup-0.5.1.exe IPTV-Portable-0.5.1.exe > SHA256SUMS.txt)
+          test "$(wc -l < release/SHA256SUMS.txt)" -eq 10
           test "$(find release -maxdepth 1 -type f | wc -l)" -eq 11
           ls -lh release/
       - name: Publish the verified preview release with ten platform assets and checksums
