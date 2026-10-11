@@ -35,8 +35,6 @@ jobs:
           IPTV-v0.5.1-LG-webOS.ipk
           IPTV-v0.5.1-Samsung-Tizen-STAGING.zip
           IPTV-v0.5.1-Web.zip
-          IPTV-Setup-0.5.0.exe
-          IPTV-Portable-0.5.0.exe
           IPTV-Setup-0.5.1.exe
           IPTV-Portable-0.5.1.exe
           SHA256SUMS.txt
