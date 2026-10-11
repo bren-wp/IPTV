@@ -104,5 +104,5 @@ test('when the main catalog API is offline, valid hourly GitHub snapshot restore
   await page.route('https://raw.githubusercontent.com/bren-wp/IPTV/main/apps/player/public/catalog.json',
     route=>route.fulfill({json:remoteCatalog}));
   await page.goto('/');
-  await expect(page.getByRole('button',{name:'Watch Verified Backup TV'})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Watch Verified Backup TV'}).first()).toBeVisible();
 });
