@@ -148,7 +148,8 @@ export default function App(){
       setCatalog(previous=>result.isFallback?newestCatalog(previous,result.catalog):result.catalog);
       setFallback(result.isFallback);
       setError('');
-      if(!result.isFallback) void saveStoredCatalog(result.catalog);
+      // Remote hourly snapshots are also verified: retain them across app restarts.
+      void saveStoredCatalog(result.catalog);
     } catch(e) {
       if(signal?.aborted)return;
       setError(e instanceof Error?e.message:'Channel directory is temporarily unavailable.');
