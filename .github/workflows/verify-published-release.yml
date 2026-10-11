@@ -1,4 +1,4 @@
-name: Verify published IPTV release
+name: Verify published IPTV v0.5.1 release
 
 on:
   pull_request:
@@ -11,20 +11,18 @@ permissions:
 
 jobs:
   verify_release:
-    name: Validate v0.5.1 files, archives and SHA-256 digests
+    name: Verify all eleven published v0.5.1 assets and SHA-256 entries
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 15
     env:
       GH_TOKEN: ${{ github.token }}
       TAG: v0.5.1
     steps:
       - uses: actions/checkout@v4
-      - name: Confirm a real published prerelease and exact package list
+      - name: Check published prerelease and exact asset names
         shell: bash
         run: |
           set -euo pipefail
-          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json tagName,isPrerelease,targetCommitish,assets \
-            --jq '{tag:.tagName,prerelease:.isPrerelease,commit:.targetCommitish,files:[.assets[].name]}'
           test "$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isPrerelease --jq .isPrerelease)" = true
           cat > expected.txt <<'EXPECTED'
           IPTV-v0.5.1-Android-debug.apk
@@ -40,44 +38,32 @@ jobs:
           SHA256SUMS.txt
           EXPECTED
           sort -o expected.txt expected.txt
-          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets \
-            --jq '.assets[].name' | sort > actual.txt
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | sort > actual.txt
           diff -u expected.txt actual.txt
-      - name: Download every published release asset
+      - name: Download published packages
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p verify
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir verify
           test "$(find verify -maxdepth 1 -type f | wc -l)" -eq 11
-      - name: Verify checksums and package contents
+      - name: Check all ten SHA-256 entries and archive formats
         shell: bash
         run: |
           set -euo pipefail
           cd verify
-          sha256sum --check SHA256SUMS.txt
           test "$(wc -l < SHA256SUMS.txt)" -eq 10
-          sed -E 's/^[[:xdigit:]]{64}  //' SHA256SUMS.txt | sort > listed.txt
-          grep -v '^SHA256SUMS.txt
-          for file in *.apk *.aab *.zip; do unzip -tq "$file" >/dev/null; done
+          sha256sum --check SHA256SUMS.txt
+          sed -E 's/^[[:xdigit:]]{64}  //' SHA256SUMS.txt | sort > manifest-names.txt
+          grep -v '^SHA256SUMS.txt$' ../expected.txt | sort > required-names.txt
+          diff -u required-names.txt manifest-names.txt
+          for archive in *.apk *.aab *.zip; do unzip -tq "$archive" >/dev/null; done
           test -s IPTV-v0.5.1-LG-webOS.ipk
-          for exe in IPTV-Setup-0.5.0.exe IPTV-Portable-0.5.0.exe; do
+          for exe in IPTV-Setup-0.5.1.exe IPTV-Portable-0.5.1.exe; do
             test -s "$exe"
             test "$(stat -c '%s' "$exe")" -gt 10000000
           done
-          unzip -Z1 IPTV-v0.5.1-Web.zip | grep -qx 'index.html'
-          unzip -Z1 IPTV-v0.5.1-Samsung-Tizen-STAGING.zip | grep -qx 'config.xml'
-          unzip -Z1 IPTV-v0.5.1-iOS-Simulator-UNSIGNED.zip | grep -qx 'App.app/Info.plist'
-          echo "Verified all ten published v0.5.1 platform packages and checksum manifest."
- ../expected.txt | sort > required.txt
-          diff -u required.txt listed.txt
-          for file in *.apk *.aab *.zip; do unzip -tq "$file" >/dev/null; done
-          test -s IPTV-v0.5.1-LG-webOS.ipk
-          for exe in IPTV-Setup-0.5.0.exe IPTV-Portable-0.5.0.exe; do
-            test -s "$exe"
-            test "$(stat -c '%s' "$exe")" -gt 10000000
-          done
-          unzip -Z1 IPTV-v0.5.1-Web.zip | grep -qx 'index.html'
-          unzip -Z1 IPTV-v0.5.1-Samsung-Tizen-STAGING.zip | grep -qx 'config.xml'
-          unzip -Z1 IPTV-v0.5.1-iOS-Simulator-UNSIGNED.zip | grep -qx 'App.app/Info.plist'
-          echo "Verified all ten published v0.5.1 platform packages and checksum manifest."
+          unzip -Z1 IPTV-v0.5.1-Web.zip | grep -qx index.html
+          unzip -Z1 IPTV-v0.5.1-Samsung-Tizen-STAGING.zip | grep -qx config.xml
+          unzip -Z1 IPTV-v0.5.1-iOS-Simulator-UNSIGNED.zip | grep -qx App.app/Info.plist
+          echo "Verified ten release package hashes, all eleven filenames, and package formats."
