@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildCatalog, filterChannels, isCatalog, loadCachedCatalog, safeMediaUrl, loadCatalog, retainReviewedStreams } from '../src/catalog.ts';
+import { buildCatalog, filterChannels, isCatalog, loadCachedCatalog, safeMediaUrl, loadCatalog, retainReviewedStreams, bestSnapshot, REMOTE_SNAPSHOT } from '../src/catalog.ts';
 
 const metadata = [
   { id: 'Alpha.hr', name: 'Alpha TV', country: 'HR', categories: ['news'], is_nsfw: false },
@@ -118,4 +118,58 @@ test('keeps safe reviewed GitHub streams through direct refresh and drops invali
   assert.equal(live.channels.length,1);
   assert.equal(live.channels[0].streams.length,2);
   assert.equal(live.channels[0].streams[1].source,'github:public-github-playlist');
+});
+
+test('newer verified snapshots win; unsafe partial snapshots never replace healthy data',()=>{
+  const old=buildCatalog(metadata,streams,[]);
+  old.updatedAt='2026-10-01T12:00:00.000Z';
+  const newer=structuredClone(old);
+  newer.updatedAt='2026-10-11T12:00:00.000Z';
+  assert.equal(bestSnapshot(newer,old),newer);
+  assert.equal(bestSnapshot(old,newer),newer);
+  assert.equal(bestSnapshot({},old),old);
+  assert.equal(bestSnapshot(null,newer),newer);
+
+  const many=structuredClone(newer);
+  const template=many.channels[0];
+  many.channels=Array.from({length:120},(_,i)=>({...template,id:'Channel'+i}));
+  many.updatedAt='2026-10-10T12:00:00.000Z';
+  assert.equal(bestSnapshot(many,newer),many);
+  assert.equal(bestSnapshot(newer,many),many);
+});
+
+test('live API outage loads the newest valid GitHub snapshot rather than the bundled old one',async()=>{
+  const previousFetch=globalThis.fetch;
+  const backup=buildCatalog(metadata,streams,[]);
+  backup.updatedAt='2026-10-11T12:00:00.000Z';
+  const embedded=structuredClone(backup);
+  embedded.updatedAt='2026-10-09T12:00:00.000Z';
+  const fetched:string[]=[];
+  try {
+    globalThis.fetch=async(resource:RequestInfo|URL)=>{
+      const url=String(resource);fetched.push(url);
+      if(url===REMOTE_SNAPSHOT)return Response.json(backup);
+      if(url==='./catalog.json')return Response.json(embedded);
+      return new Response('Unavailable',{status:503});
+    };
+    const result=await loadCatalog();
+    assert.equal(result.isFallback,true);
+    assert.equal(result.catalog.updatedAt,backup.updatedAt);
+    assert.ok(fetched.includes(REMOTE_SNAPSHOT));
+  } finally {globalThis.fetch=previousFetch;}
+});
+
+test('falls back to embedded data when external snapshot and live API are unreachable',async()=>{
+  const previousFetch=globalThis.fetch;
+  const embedded=buildCatalog(metadata,streams,[]);
+  try{
+    globalThis.fetch=async(resource:RequestInfo|URL)=>{
+      return String(resource)==='./catalog.json'
+        ? Response.json(embedded)
+        : new Response('Unavailable',{status:503});
+    };
+    const result=await loadCatalog();
+    assert.equal(result.isFallback,true);
+    assert.equal(result.catalog.channels.length,1);
+  }finally{globalThis.fetch=previousFetch;}
 });
