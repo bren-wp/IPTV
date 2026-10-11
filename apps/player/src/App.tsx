@@ -148,7 +148,8 @@ export default function App(){
       setCatalog(previous=>result.isFallback?newestCatalog(previous,result.catalog):result.catalog);
       setFallback(result.isFallback);
       setError('');
-      if(!result.isFallback) void saveStoredCatalog(result.catalog);
+      // Remote hourly snapshots are also verified: retain them across app restarts.
+      void saveStoredCatalog(result.catalog);
     } catch(e) {
       if(signal?.aborted)return;
       setError(e instanceof Error?e.message:'Channel directory is temporarily unavailable.');
@@ -359,7 +360,7 @@ export default function App(){
           <div className="privacy-note"><Icon name="info"/><p>Favorites and recently watched channels are stored only on this device. Playback connects directly to independent third-party streaming hosts. Channel availability, EPG, geographic access and codec support vary.</p></div>
         </section>}
         {error&&<div role="alert" className="alert-error"><Icon name="info" size={20}/><div><strong>Live updates unavailable</strong><p>{error}{catalog?' Showing the last available directory.':''}</p></div><button type="button" className="outline-button" onClick={()=>void refresh()} disabled={refreshing}>Retry</button></div>}
-        {fallback&&catalog&&!error&&<p className="cache-note" role="status">Using the saved directory while fresh data loads.</p>}
+        {fallback&&catalog&&!error&&<p className="cache-note" role="status">The live source is temporarily unavailable. Showing the most recent verified channel directory; retry to check for updates.</p>}
         {loading&&!channels.length&&view!=='home'&&<div className="loading-state" role="status"><span className="loading-spinner"/>Loading channels…</div>}
         <footer className="footer"><img src="./brand-symbol.svg" alt="" width="27" height="27"/><span>IPTV · One App. Every Screen.</span><span className="footer-legal">Channel streams and guide data are provided by external services and may be restricted or unavailable.</span></footer>
       </main>

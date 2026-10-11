@@ -41,7 +41,7 @@ The channel tiles reflect actual live streams and their metadata. Movies and Ser
 ### Thoughtful by design
 
 - **Beautiful dark interface.** Spacious cards, clean typography, accessible controls and adaptive layouts.
-- **Live, not stale.** Hourly scheduled directory synchronization, in-app checks about every 15 minutes, and refresh on reconnect or window focus. The newest verified directory is also retained locally for offline startup.
+- **Live, not stale.** Hourly scheduled directory synchronization, in-app checks about every 15 minutes, and refresh on reconnect or window focus. When the main directory API is down, the app checks the verified GitHub snapshot before using the bundled catalog; a validated device-local copy is retained for offline startup.
 - **Your channels, your way.** Store favorites locally without account creation.
 - **More context.** Optional programme guide with *on now* and *up next* information.
 - **Resilient by default.** Multiple stream choices where available, bounded HLS recovery, automatic source switching on failure, URL validation and cached directory fallback.
@@ -146,17 +146,17 @@ The platform bundler prepares `platforms/samsung-tizen/staging/`, `platforms/lg-
 
 ## Automatic catalog updates
 
-Channel metadata is checked in-app around every 15 minutes while online and visible, plus immediately after the app regains focus or connectivity when a refresh is due. The directory snapshot is synchronized on the GitHub default branch every hour (subject to GitHub's scheduler delays). Last known good data is retained across sessions; external links may still be unavailable. The update job validates the generated directory and avoids committing identical output. The last valid snapshot is retained if the upstream service fails. Video is played directly from the third-party providers; this repository does not host or rebroadcast TV streams.
+Channel metadata is checked in-app around every 15 minutes while online and visible, plus immediately after the app regains focus or connectivity when a refresh is due. The directory snapshot is synchronized on the GitHub default branch every hour (subject to GitHub's scheduler delays). Last known good data is retained across sessions; external links may still be unavailable. The update job validates the generated directory and avoids committing identical output. The last valid snapshot is retained if the upstream service fails. When network API calls fail, the app also attempts the latest validated read-only snapshot from this repository's hourly job before reverting to its installed copy. This is a best-effort fallback, not a guarantee of uptime. Video is played directly from the third-party providers; this repository does not host or rebroadcast TV streams.
 
 **Note:** Schedules and streams depend on the broadcaster. Some channels may be unavailable, restricted geographically, DRM-protected or incompatible with particular devices.
 
 ## GitHub releases
 
-**[IPTV v0.5.0 — Preview downloads](https://github.com/bren-wp/IPTV/releases/tag/v0.5.0)**
+**[IPTV v0.5.1 — Preview downloads](https://github.com/bren-wp/IPTV/releases/tag/v0.5.1)**
 
 The release pipeline publishes downloadable **Android and Android TV debug APKs**, **unsigned AABs**, **LG webOS IPK**, **iOS Simulator ZIP**, **Samsung Tizen staging ZIP**, **Web ZIP**, **Windows Setup/Portable EXEs** and SHA-256 checksums, but only after every platform CI job succeeds on the `main` branch. Check the release page for actual availability.
 
-These preview binaries are not certified, production-signed app-store submissions. See [v0.5.0 release notes](docs/releases/v0.5.0.md) and the [production release checklist](docs/PRODUCTION_RELEASE.md).
+These preview binaries are not certified, production-signed app-store submissions. See [v0.5.1 release notes](docs/releases/v0.5.1.md) and the [production release checklist](docs/PRODUCTION_RELEASE.md).
 
 ## Downloads and development builds
 

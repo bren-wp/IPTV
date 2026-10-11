@@ -24,6 +24,8 @@ test.beforeEach(async({page})=>{
     return route.fulfill({json:value});
   });
   await page.route('**/catalog.json',route=>route.fulfill({json:{version:1,updatedAt:null,source:'test',channels:[]}}));
+  await page.route('https://raw.githubusercontent.com/bren-wp/IPTV/main/apps/player/public/catalog.json',route=>
+    route.fulfill({json:{version:1,updatedAt:null,source:'test',channels:[]}}));
   await page.route('https://example.test/programmes.xml',route=>{
     const start=xmlDate(new Date(Date.now()-10*60_000));
     const stop=xmlDate(new Date(Date.now()+30*60_000));
@@ -87,4 +89,20 @@ test('failed native stream automatically selects the next source', async ({page,
   await page.getByRole('button',{name:'Watch Example Sport'}).click();
   await expect(page.getByRole('region',{name:'Now watching'})).toBeVisible();
   await expect(page.locator('.source-select select')).toHaveValue('1',{timeout:15000});
+});
+
+test('when the main catalog API is offline, valid hourly GitHub snapshot restores channel discovery', async({page})=>{
+  const remoteCatalog={
+    version:1,updatedAt:'2026-10-11T10:00:00.000Z',source:'verified hourly snapshot',
+    channels:[{
+      id:'Backup.hr',name:'Verified Backup TV',country:'HR',
+      categories:['news'],languages:['hr'],logo:null,guides:[],
+      streams:[{url:'https://example.test/backup.m3u8',title:'Backup',quality:null,labels:[],requiresHeaders:false}]
+    }]
+  };
+  await page.route('https://iptv-org.github.io/api/**',route=>route.fulfill({status:503,body:'Unavailable'}));
+  await page.route('https://raw.githubusercontent.com/bren-wp/IPTV/main/apps/player/public/catalog.json',
+    route=>route.fulfill({json:remoteCatalog}));
+  await page.goto('/');
+  await expect(page.getByRole('button',{name:'Watch Verified Backup TV'}).first()).toBeVisible();
 });
