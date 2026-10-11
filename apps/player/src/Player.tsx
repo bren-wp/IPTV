@@ -24,6 +24,8 @@ export default function Player({ stream, channelName, onNextStream, onAutoNext, 
     let failed = false;
     let mediaWasPlaying = false;
     let stallTimer: ReturnType<typeof setTimeout> | null = null;
+    let startupTimer: ReturnType<typeof setTimeout> | null = null;
+    let autoplayBlocked = false;
     let networkRecovered = false;
     let mediaRecovered = false;
     let hls: import('hls.js').default | null = null;
@@ -33,6 +35,24 @@ export default function Player({ stream, channelName, onNextStream, onAutoNext, 
     readyVideo.removeAttribute('src');
     readyVideo.load();
 
+    function clearStartup(): void {
+      if (startupTimer !== null) clearTimeout(startupTimer);
+      startupTimer = null;
+    }
+    function watchStartup(): void {
+      clearStartup();
+      startupTimer = setTimeout(() => {
+        startupTimer = null;
+        if (!stopped && !failed && !autoplayBlocked && document.visibilityState !== 'hidden') {
+          fail('The channel did not start in time. Trying another available source.');
+        }
+      }, 30_000);
+    }
+    function autoplayNotice(): void {
+      autoplayBlocked = true;
+      clearStartup();
+      if (!stopped && !failed) setNotice('Select Play on the video to start watching.');
+    }
     function clearStall(): void {
       if (stallTimer !== null) clearTimeout(stallTimer);
       stallTimer = null;
@@ -41,6 +61,7 @@ export default function Player({ stream, channelName, onNextStream, onAutoNext, 
       if (stopped || failed) return;
       failed = true;
       clearStall();
+      clearStartup();
       // A single playback session will never cycle back to a previously failed URL.
       if (onAutoNext()) return;
       setError(message);
@@ -54,6 +75,8 @@ export default function Player({ stream, channelName, onNextStream, onAutoNext, 
     }
     function onPlaying(): void {
       mediaWasPlaying = true;
+      autoplayBlocked = false;
+      clearStartup();
       clearStall();
       if (!stopped) setNotice('');
     }
@@ -63,6 +86,8 @@ export default function Player({ stream, channelName, onNextStream, onAutoNext, 
       if (!hls) fail('Playback failed. This stream may be unavailable or unsupported.');
     }
     readyVideo.addEventListener('playing', onPlaying);
+    function onPlay(): void { if (autoplayBlocked) { autoplayBlocked = false; watchStartup(); } }
+    readyVideo.addEventListener('play', onPlay);
     readyVideo.addEventListener('waiting', onWaiting);
     readyVideo.addEventListener('stalled', onWaiting);
     readyVideo.addEventListener('error', onNativeError);
@@ -70,6 +95,7 @@ export default function Player({ stream, channelName, onNextStream, onAutoNext, 
     const path = new URL(stream.url).pathname.toLowerCase();
     const isHls = path.endsWith('.m3u8');
     const isDash = path.endsWith('.mpd');
+    watchStartup();
     async function attach(): Promise<void> {
       if (isDash) {
         fail('DASH playback is not supported. Try another source.');
@@ -100,24 +126,22 @@ export default function Player({ stream, channelName, onNextStream, onAutoNext, 
           fail('This stream could not be played. It may be offline or blocked in your region.');
         });
         instance.once(Hls.Events.MANIFEST_PARSED, () => {
-          if (!stopped && !failed) void readyVideo.play().catch(() => {
-            if (!stopped && !failed) setNotice('Select Play on the video to start watching.');
-          });
+          if (!stopped && !failed) void readyVideo.play().catch(autoplayNotice);
         });
         instance.loadSource(stream.url);
         instance.attachMedia(readyVideo);
       } else {
         readyVideo.src = stream.url;
-        void readyVideo.play().catch(() => {
-          if (!stopped && !failed) setNotice('Select Play on the video to start watching.');
-        });
+        void readyVideo.play().catch(autoplayNotice);
       }
     }
     void attach().catch(() => fail('Playback engine could not initialize. Try another source.'));
     return () => {
       stopped = true;
       clearStall();
+      clearStartup();
       readyVideo.removeEventListener('playing', onPlaying);
+      readyVideo.removeEventListener('play', onPlay);
       readyVideo.removeEventListener('waiting', onWaiting);
       readyVideo.removeEventListener('stalled', onWaiting);
       readyVideo.removeEventListener('error', onNativeError);
