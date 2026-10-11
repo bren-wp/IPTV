@@ -34,8 +34,14 @@ export async function readStoredCatalog(): Promise<Catalog | null> {
   try {
     return await new Promise(resolve => {
       let settled = false;
-      const done = (catalog: Catalog | null) => { if (!settled) { settled = true; resolve(catalog); } };
       const transaction = db.transaction(STORE_NAME, 'readonly');
+      const timer = setTimeout(() => {
+        try { transaction.abort(); } catch { /* Already closed */ }
+        done(null);
+      }, OPEN_TIMEOUT);
+      const done = (catalog: Catalog | null) => {
+        if (!settled) { settled = true; clearTimeout(timer); resolve(catalog); }
+      };
       const request = transaction.objectStore(STORE_NAME).get(KEY);
       request.onsuccess = () => {
         const value: unknown = request.result;
@@ -54,10 +60,25 @@ export async function saveStoredCatalog(catalog: Catalog): Promise<void> {
   try {
     await new Promise<void>(resolve => {
       const transaction = db.transaction(STORE_NAME, 'readwrite');
-      transaction.objectStore(STORE_NAME).put(catalog, KEY);
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => resolve();
-      transaction.onabort = () => resolve();
+      let settled = false;
+      const done = () => {
+        if (!settled) { settled = true; clearTimeout(timer); resolve(); }
+      };
+      const timer = setTimeout(() => {
+        try { transaction.abort(); } catch { /* Transaction already closed */ }
+        done();
+      }, OPEN_TIMEOUT);
+      transaction.oncomplete = done;
+      transaction.onerror = done;
+      transaction.onabort = done;
+      const request = transaction.objectStore(STORE_NAME).get(KEY);
+      request.onsuccess = () => {
+        // Network failures must not overwrite a newer offline snapshot.
+        const stored = isCatalog(request.result) ? request.result : null;
+        if (newestCatalog(stored, catalog) === catalog) {
+          transaction.objectStore(STORE_NAME).put(catalog, KEY);
+        }
+      };
     });
   } catch { /* Quota and restricted-mode failures must never block playback. */ }
   finally { db.close(); }
