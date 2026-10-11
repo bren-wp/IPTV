@@ -86,7 +86,8 @@ export default function Player({ stream, channelName, onNextStream, onAutoNext, 
       if (!hls) fail('Playback failed. This stream may be unavailable or unsupported.');
     }
     readyVideo.addEventListener('playing', onPlaying);
-    readyVideo.addEventListener('play', () => { if (autoplayBlocked) { autoplayBlocked = false; watchStartup(); } });
+    function onPlay(): void { if (autoplayBlocked) { autoplayBlocked = false; watchStartup(); } }
+    readyVideo.addEventListener('play', onPlay);
     readyVideo.addEventListener('waiting', onWaiting);
     readyVideo.addEventListener('stalled', onWaiting);
     readyVideo.addEventListener('error', onNativeError);
@@ -140,6 +141,7 @@ export default function Player({ stream, channelName, onNextStream, onAutoNext, 
       clearStall();
       clearStartup();
       readyVideo.removeEventListener('playing', onPlaying);
+      readyVideo.removeEventListener('play', onPlay);
       readyVideo.removeEventListener('waiting', onWaiting);
       readyVideo.removeEventListener('stalled', onWaiting);
       readyVideo.removeEventListener('error', onNativeError);
