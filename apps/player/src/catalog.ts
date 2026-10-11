@@ -1,6 +1,8 @@
 /** External public channel metadata provides links, not broadcast rights. */
 export const SOURCE = 'https://iptv-org.github.io/api';
 export const CACHE_PATH = './catalog.json';
+/** Public read-only snapshot published by this project's hourly update workflow. */
+export const REMOTE_SNAPSHOT = 'https://raw.githubusercontent.com/bren-wp/IPTV/main/apps/player/public/catalog.json';
 
 export interface Stream {
   url: string;
@@ -190,6 +192,26 @@ export function filterChannels(
   );
 }
 
+/**
+ * Select the most recently updated *validated* snapshot, while preventing a
+ * transient partial sync from wiping out most of an existing channel list.
+ */
+export function bestSnapshot(first: unknown, second: unknown): Catalog | null {
+  const valid = (value: unknown): Catalog | null =>
+    isCatalog(value) && value.channels.length > 0 ? value : null;
+  const a = valid(first);
+  const b = valid(second);
+  if (!a) return b;
+  if (!b) return a;
+  const aTime = a.updatedAt ? Date.parse(a.updatedAt) : 0;
+  const bTime = b.updatedAt ? Date.parse(b.updatedAt) : 0;
+  const tA = Number.isFinite(aTime) ? aTime : 0;
+  const tB = Number.isFinite(bTime) ? bTime : 0;
+  const [newest, older] = tB > tA ? [b, a] : [a, b];
+  if (older.channels.length >= 100 && newest.channels.length < older.channels.length / 2) return older;
+  return newest;
+}
+
 /** Load the bundled verified snapshot before accessing any external service. */
 export async function loadCachedCatalog(signal?: AbortSignal): Promise<Catalog | null> {
   try {
@@ -229,16 +251,24 @@ export async function loadCatalog(signal?: AbortSignal): Promise<{ catalog: Cata
     ]);
     const catalog = buildCatalog(channels, streams, logos, guides);
     if (catalog.channels.length === 0) throw new Error('No channels were returned.');
-    // The GitHub Actions feed adds explicitly reviewed optional streams to the
-    // bundled snapshot, without requiring every client to fetch GitHub M3U files.
-    const snapshot = await fetchJson(CACHE_PATH).catch(() => null);
-    retainReviewedStreams(catalog, isCatalog(snapshot) ? snapshot : null);
+    // Prefer the hourly GitHub snapshot over the snapshot frozen into the
+    // installed binary. This also retains reviewed alternative stream URLs.
+    const remote = await fetchJson(REMOTE_SNAPSHOT).catch(() => null);
+    const embedded = remote ? null : await fetchJson(CACHE_PATH).catch(() => null);
+    retainReviewedStreams(catalog, bestSnapshot(remote, embedded));
     catalog.updatedAt = new Date().toISOString();
     return { catalog, isFallback: false };
   } catch (error) {
     if (signal?.aborted) throw error;
-    const fallback = await fetchJson(CACHE_PATH);
-    if (!isCatalog(fallback) || fallback.channels.length === 0) throw error;
+    // Both fallback paths are read-only and validated. A failed GitHub
+    // request must not prevent loading the bundled snapshot.
+    const [remote, embedded] = await Promise.all([
+      fetchJson(REMOTE_SNAPSHOT).catch(() => null),
+      fetchJson(CACHE_PATH).catch(() => null)
+    ]);
+    if (signal?.aborted) throw error;
+    const fallback = bestSnapshot(remote, embedded);
+    if (!fallback) throw error;
     return { catalog: fallback, isFallback: true };
   }
 }
