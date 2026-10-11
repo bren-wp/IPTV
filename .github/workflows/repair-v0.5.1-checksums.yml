@@ -1,0 +1,74 @@
+name: Repair and verify v0.5.1 checksum manifest
+
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/repair-v0.5.1-checksums.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    name: Verify all ten release binaries and complete SHA-256 manifest
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Await v0.5.1 prerelease publication
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 24); do
+            if gh release view v0.5.1 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then exit 0; fi
+            sleep 20
+          done
+          echo "::error::v0.5.1 GitHub release is not available after waiting."
+          exit 1
+      - name: Download and validate exact asset filenames
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p assets
+          gh release download v0.5.1 --repo "$GITHUB_REPOSITORY" --dir assets
+          cat > expected.txt <<'EXPECTED'
+          IPTV-v0.5.1-Android-debug.apk
+          IPTV-v0.5.1-Android-release-UNSIGNED.aab
+          IPTV-v0.5.1-AndroidTV-debug.apk
+          IPTV-v0.5.1-AndroidTV-release-UNSIGNED.aab
+          IPTV-v0.5.1-iOS-Simulator-UNSIGNED.zip
+          IPTV-v0.5.1-LG-webOS.ipk
+          IPTV-v0.5.1-Samsung-Tizen-STAGING.zip
+          IPTV-v0.5.1-Web.zip
+          IPTV-Setup-0.5.1.exe
+          IPTV-Portable-0.5.1.exe
+          SHA256SUMS.txt
+          EXPECTED
+          (cd assets && find . -maxdepth 1 -type f -printf '%f\n' | sort) > actual.txt
+          sort -o expected.txt expected.txt
+          diff -u expected.txt actual.txt
+          for file in assets/*.apk assets/*.aab assets/*.zip; do
+            unzip -tq "$file" > /dev/null
+          done
+          for file in assets/*.exe assets/*.ipk; do test -s "$file"; done
+      - name: Generate a full manifest for all ten platform assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd assets
+          rm SHA256SUMS.txt
+          sha256sum IPTV-v0.5.1-* IPTV-Setup-0.5.1.exe IPTV-Portable-0.5.1.exe > SHA256SUMS.txt
+          test "$(wc -l < SHA256SUMS.txt)" -eq 10
+          sha256sum --check SHA256SUMS.txt
+      - name: Replace incomplete checksum file and verify published content
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release upload v0.5.1 assets/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber
+          mkdir -p verified
+          gh release download v0.5.1 --repo "$GITHUB_REPOSITORY" --pattern SHA256SUMS.txt --dir verified
+          cmp assets/SHA256SUMS.txt verified/SHA256SUMS.txt
+          (cd assets && sha256sum --check SHA256SUMS.txt)
+          echo "All ten platform packages have verified SHA-256 entries."
