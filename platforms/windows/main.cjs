@@ -23,6 +23,11 @@ function localFile(requestUrl) {
   let pathname;
   try { pathname = decodeURIComponent(url.pathname); }
   catch { throw new Error('Malformed application path.'); }
+  // Query and fragment never become filesystem paths; encoded slashes/backslashes
+  // are forbidden to avoid platform-specific path interpretation on Windows.
+  if (/%2f|%5c/i.test(url.pathname) || pathname.includes('\\') || pathname.includes('\0')) {
+    throw new Error('Invalid application asset path.');
+  }
   const file = path.resolve(root, '.' + (pathname === '/' ? '/index.html' : pathname));
   const relative = path.relative(root, file);
   if (relative.startsWith('..') || path.isAbsolute(relative)) {
