@@ -56,6 +56,20 @@ jobs:
           set -euo pipefail
           cd verify
           sha256sum --check SHA256SUMS.txt
+          test "$(wc -l < SHA256SUMS.txt)" -eq 10
+          sed -E 's/^[[:xdigit:]]{64}  //' SHA256SUMS.txt | sort > listed-in-checksums.txt
+          grep -v '^SHA256SUMS.txt
+          test -s IPTV-v0.5.1-LG-webOS.ipk
+          for exe in IPTV-Setup-0.5.1.exe IPTV-Portable-0.5.1.exe; do
+            test -s "$exe"
+            test "$(stat -c '%s' "$exe")" -gt 10000000
+          done
+          unzip -Z1 IPTV-v0.5.1-Web.zip | grep -qx 'index.html'
+          unzip -Z1 IPTV-v0.5.1-Samsung-Tizen-STAGING.zip | grep -qx 'config.xml'
+          unzip -Z1 IPTV-v0.5.1-iOS-Simulator-UNSIGNED.zip | grep -qx 'App.app/Info.plist'
+          echo "Verified all ten published v0.5.1 platform packages and checksum manifest."
+ ../expected.txt | sort > actual-package-names.txt
+          diff -u actual-package-names.txt listed-in-checksums.txt
           for file in *.apk *.aab *.zip; do unzip -tq "$file" >/dev/null; done
           test -s IPTV-v0.5.1-LG-webOS.ipk
           for exe in IPTV-Setup-0.5.1.exe IPTV-Portable-0.5.1.exe; do
