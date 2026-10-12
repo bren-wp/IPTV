@@ -173,3 +173,50 @@ test('falls back to embedded data when external snapshot and live API are unreac
     assert.equal(result.catalog.channels.length,1);
   }finally{globalThis.fetch=previousFetch;}
 });
+
+test('unnamed upstream channels never get fabricated display labels',()=>{
+  const catalog=buildCatalog([...metadata,{id:'Unnamed.hr',name:'   ',country:'HR'}],
+    [...streams,{channel:'Unnamed.hr',url:'https://example.com/unnamed.m3u8'}],[]);
+  assert.equal(catalog.channels.length,1);
+  assert.equal(catalog.channels[0].name,'Alpha TV');
+});
+
+test('blocks multicast and IPv4-mapped loopback or private IPv6 media hosts',()=>{
+  for(const url of ['http://[ff02::1]/','http://[2001:db8::1]/',
+    'http://[::ffff:7f00:1]/','http://[::ffff:c0a8:101]/']){
+    assert.equal(safeMediaUrl(url),null,url);
+  }
+  assert.equal(safeMediaUrl('https://[2606:4700:4700::1111]/stream.m3u8'),
+    'https://[2606:4700:4700::1111]/stream.m3u8');
+});
+
+test('remote fast path requires a recent and substantially complete directory',async()=>{
+  const {isFreshSnapshot}=await import('../src/catalog.ts');
+  const now=Date.now();
+  const directory=buildCatalog(metadata,streams,[]);
+  directory.channels=Array.from({length:110},(_,i)=>({...directory.channels[0],id:'Live'+i}));
+  directory.updatedAt=new Date(now-45*60_000).toISOString();
+  assert.equal(isFreshSnapshot(directory,now),true);
+  assert.equal(isFreshSnapshot({...directory,updatedAt:new Date(now-7*60*60_000).toISOString()},now),false);
+  assert.equal(isFreshSnapshot({...directory,updatedAt:new Date(now+60*60_000).toISOString()},now),false);
+  assert.equal(isFreshSnapshot({...directory,channels:directory.channels.slice(0,2)},now),false);
+});
+
+test('fresh verified catalog avoids four heavyweight API downloads',async()=>{
+  const original=globalThis.fetch;
+  const directory=buildCatalog(metadata,streams,[]);
+  directory.channels=Array.from({length:110},(_,i)=>({...directory.channels[0],id:'Live'+i}));
+  directory.updatedAt=new Date(Date.now()-5*60_000).toISOString();
+  const requested:string[]=[];
+  try{
+    globalThis.fetch=async(input:RequestInfo|URL)=>{
+      requested.push(String(input));
+      assert.equal(String(input),REMOTE_SNAPSHOT);
+      return Response.json(directory);
+    };
+    const loaded=await loadCatalog();
+    assert.equal(loaded.isFallback,false);
+    assert.equal(loaded.catalog.channels.length,110);
+    assert.deepEqual(requested,[REMOTE_SNAPSHOT]);
+  }finally{globalThis.fetch=original;}
+});

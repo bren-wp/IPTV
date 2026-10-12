@@ -144,8 +144,8 @@ export default function App(){
     try {
       const result=await loadCatalog(signal);
       if(signal?.aborted)return;
-      // Never overwrite a newer in-memory result with an older bundled fallback.
-      setCatalog(previous=>result.isFallback?newestCatalog(previous,result.catalog):result.catalog);
+      // Slow local reads never overwrite newer directory results.
+      setCatalog(previous=>newestCatalog(previous,result.catalog));
       setFallback(result.isFallback);
       setError('');
       // Remote hourly snapshots are also verified: retain them across app restarts.
@@ -160,18 +160,16 @@ export default function App(){
   },[]);
   useEffect(()=>{
     const controller=new AbortController();
-    void(async()=>{
-      try {
-        const [bundled,stored]=await Promise.all([
-          loadCachedCatalog(controller.signal), readStoredCatalog()
-        ]);
-        const cached=newestCatalog(bundled,stored);
-        if(cached&&!controller.signal.aborted){
-          setCatalog(cached);setFallback(true);setLoading(false);
-        }
-      }catch{/* Network access may be cancelled when navigating away. */}
-      if(!controller.signal.aborted)await refresh(controller.signal);
-    })();
+    // Never hold the first visible channel list behind a slow IndexedDB read.
+    const revealCached = (cached: Catalog | null) => {
+      if (cached && !controller.signal.aborted) {
+        setCatalog(previous=>newestCatalog(previous,cached));
+        setLoading(false);
+      }
+    };
+    void loadCachedCatalog(controller.signal).then(revealCached).catch(()=>{});
+    void readStoredCatalog().then(revealCached).catch(()=>{});
+    void refresh(controller.signal);
     // Visibility, network reconnection and a low-cost timer complement the
     // server-side hourly sync. Offline and hidden apps do not hammer hosts.
     const check=()=>{

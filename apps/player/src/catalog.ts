@@ -59,7 +59,8 @@ export function safeMediaUrl(value: unknown): string | null {
       const ip = host.slice(1, -1);
       if (ip === '::1' || ip === '::' || ip.startsWith('fc') || ip.startsWith('fd') ||
           ip.startsWith('fe8') || ip.startsWith('fe9') || ip.startsWith('fea') ||
-          ip.startsWith('feb') || ip.startsWith('::ffff:')) return null;
+          ip.startsWith('feb') || ip.startsWith('ff') ||
+          ip.startsWith('2001:db8:') || ip.startsWith('::ffff:')) return null;
     }
     if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) {
       const [first, second] = host.split('.').map(Number);
@@ -84,9 +85,11 @@ export function buildCatalog(
   for (const raw of channelsRaw) {
     if (!isRecord(raw)) continue;
     const id = str(raw.id);
-    if (!id || raw.is_nsfw === true || raw.closed || channels.has(id)) continue;
+    const name = str(raw.name);
+    // Only show publisher-supplied channel names, never invent display titles.
+    if (!id || !name || raw.is_nsfw === true || raw.closed || channels.has(id)) continue;
     channels.set(id, {
-      id, name: str(raw.name) ?? id, country: str(raw.country) ?? 'XX',
+      id, name, country: str(raw.country) ?? 'XX',
       categories: strings(raw.categories), languages: strings(raw.languages),
       logo: null, streams: [], guides: []
     });
@@ -212,6 +215,14 @@ export function bestSnapshot(first: unknown, second: unknown): Catalog | null {
   return newest;
 }
 
+/** Accept a timely and sufficiently complete verified hourly snapshot. */
+export function isFreshSnapshot(value: unknown, now = Date.now()): value is Catalog {
+  if (!isCatalog(value) || value.channels.length < 100 || !value.updatedAt) return false;
+  const timestamp = Date.parse(value.updatedAt);
+  return Number.isFinite(timestamp) && timestamp <= now + 5 * 60_000 &&
+    now - timestamp <= 6 * 60 * 60_000;
+}
+
 /** Load the bundled verified snapshot before accessing any external service. */
 export async function loadCachedCatalog(signal?: AbortSignal): Promise<Catalog | null> {
   try {
@@ -227,11 +238,11 @@ export async function loadCachedCatalog(signal?: AbortSignal): Promise<Catalog |
 
 /** The installed app can refresh without a new release; its bundled snapshot remains a fallback. */
 export async function loadCatalog(signal?: AbortSignal): Promise<{ catalog: Catalog; isFallback: boolean }> {
-  const fetchJson = async (path: string): Promise<unknown> => {
+  const fetchJson = async (path: string, timeoutMs = 20_000): Promise<unknown> => {
     // AbortSignal.any/timeout are missing on several older Smart TV WebKit engines.
     const controller = new AbortController();
     const cancel = (): void => controller.abort();
-    const timeout = setTimeout(cancel, 20_000);
+    const timeout = setTimeout(cancel, timeoutMs);
     signal?.addEventListener('abort', cancel, { once: true });
     if (signal?.aborted) cancel();
     try {
@@ -243,6 +254,11 @@ export async function loadCatalog(signal?: AbortSignal): Promise<{ catalog: Cata
       signal?.removeEventListener('abort', cancel);
     }
   };
+  // Verified hourly snapshot: a single request instead of four large upstream
+  // API downloads. The app interface is always packaged on the device.
+  const remote = await fetchJson(REMOTE_SNAPSHOT, 7_000).catch(() => null);
+  if (signal?.aborted) throw new DOMException('Catalog loading cancelled.', 'AbortError');
+  if (isFreshSnapshot(remote)) return { catalog: remote, isFallback: false };
   try {
     const [channels, streams, logos, guides] = await Promise.all([
       fetchJson(SOURCE + '/channels.json'), fetchJson(SOURCE + '/streams.json'),
@@ -253,7 +269,6 @@ export async function loadCatalog(signal?: AbortSignal): Promise<{ catalog: Cata
     if (catalog.channels.length === 0) throw new Error('No channels were returned.');
     // Prefer the hourly GitHub snapshot over the snapshot frozen into the
     // installed binary. This also retains reviewed alternative stream URLs.
-    const remote = await fetchJson(REMOTE_SNAPSHOT).catch(() => null);
     const embedded = remote ? null : await fetchJson(CACHE_PATH).catch(() => null);
     retainReviewedStreams(catalog, bestSnapshot(remote, embedded));
     catalog.updatedAt = new Date().toISOString();
@@ -262,10 +277,7 @@ export async function loadCatalog(signal?: AbortSignal): Promise<{ catalog: Cata
     if (signal?.aborted) throw error;
     // Both fallback paths are read-only and validated. A failed GitHub
     // request must not prevent loading the bundled snapshot.
-    const [remote, embedded] = await Promise.all([
-      fetchJson(REMOTE_SNAPSHOT).catch(() => null),
-      fetchJson(CACHE_PATH).catch(() => null)
-    ]);
+    const embedded = await fetchJson(CACHE_PATH).catch(() => null);
     if (signal?.aborted) throw error;
     const fallback = bestSnapshot(remote, embedded);
     if (!fallback) throw error;
