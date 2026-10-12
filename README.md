@@ -53,4 +53,4 @@ Local favorites, settings and recent channels need no account. The app fetches t
 
 **Real source names, not invented TV programmes:** channel names and XMLTV titles come from external published catalogues; schedules can be missing or wrong upstream. No guarantee that every source is online, permitted for redistribution, or compatible with every device. Verify rights and playback on physical hardware before retail release.
 
-[Full technical docs](docs/INDEX.md) · [License](LICENSE) · [Release notes](docs/releases/v0.5.3.md)
+[Full technical docs](docs/INDEX.md) · [License](LICENSE) · [Release notes](docs/releases/v0.5.4.md)

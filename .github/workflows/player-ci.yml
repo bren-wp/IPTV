@@ -242,7 +242,7 @@ jobs:
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build-ios \
-            MARKETING_VERSION=0.5.3 CURRENT_PROJECT_VERSION=8 CODE_SIGNING_ALLOWED=NO build
+            MARKETING_VERSION=0.5.4 CURRENT_PROJECT_VERSION=9 CODE_SIGNING_ALLOWED=NO build
       - uses: actions/upload-artifact@v4
         with:
           name: iptv-ios-simulator-app
@@ -286,8 +286,8 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $setup = 'platforms/windows/outputs/IPTV-Setup-0.5.3.exe'
-          $portable = 'platforms/windows/outputs/IPTV-Portable-0.5.3.exe'
+          $setup = 'platforms/windows/outputs/IPTV-Setup-0.5.4.exe'
+          $portable = 'platforms/windows/outputs/IPTV-Portable-0.5.4.exe'
           foreach ($file in @($setup, $portable)) {
             if (!(Test-Path $file) -or (Get-Item $file).Length -lt 10000000) {
               throw "Missing or unexpectedly small Windows EXE: $file"
@@ -308,12 +308,12 @@ jobs:
         with:
           name: iptv-windows-setup-and-portable
           path: |
-            platforms/windows/outputs/IPTV-Setup-0.5.3.exe
-            platforms/windows/outputs/IPTV-Portable-0.5.3.exe
+            platforms/windows/outputs/IPTV-Setup-0.5.4.exe
+            platforms/windows/outputs/IPTV-Portable-0.5.4.exe
           if-no-files-found: error
 
   publish_preview:
-    name: Publish v0.5.3 GitHub Preview Release
+    name: Publish v0.5.4 GitHub Preview Release
     if: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
     needs: [shared, android, android_tv, ios, windows]
     runs-on: ubuntu-latest
@@ -322,7 +322,7 @@ jobs:
       contents: write
       actions: read
     concurrency:
-      group: iptv-v0.5.3-preview-release
+      group: iptv-v0.5.4-preview-release
       cancel-in-progress: false
     steps:
       - name: Check out the tested source revision
@@ -333,13 +333,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v0.5.3 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            existing_count="$(gh release view v0.5.3 --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets | length')"
+          if gh release view v0.5.4 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            existing_count="$(gh release view v0.5.4 --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets | length')"
             if [ "$existing_count" -ne 10 ]; then
-              echo "::error::Version v0.5.3 exists but has $existing_count assets, not 11. Manual review required."
+              echo "::error::Version v0.5.4 exists but has $existing_count assets, not 10. Manual review required."
               exit 1
             fi
-            echo "Release v0.5.3 already contains all ten files. Skipping duplicate upload."
+            echo "Release v0.5.4 already contains all ten files. Skipping duplicate upload."
             echo "present=true" >> "$GITHUB_OUTPUT"
           else
             echo "present=false" >> "$GITHUB_OUTPUT"
@@ -374,12 +374,12 @@ jobs:
             test -s "${files[0]}"
             cp "${files[0]}" "release/$target"
           }
-          copy_one iptv-android-debug-apk apk IPTV-v0.5.3-Android-debug.apk
-          copy_one iptv-android-release-aab-unsigned aab IPTV-v0.5.3-Android-release-UNSIGNED.aab
-          copy_one iptv-android-tv-debug-apk apk IPTV-v0.5.3-AndroidTV-debug.apk
-          copy_one iptv-android-tv-release-aab-unsigned aab IPTV-v0.5.3-AndroidTV-release-UNSIGNED.aab
-          copy_one iptv-lg-webos-ipk ipk IPTV-v0.5.3-LG-webOS.ipk
-          for exe in IPTV-Setup-0.5.3.exe IPTV-Portable-0.5.3.exe; do
+          copy_one iptv-android-debug-apk apk IPTV-v0.5.4-Android-debug.apk
+          copy_one iptv-android-release-aab-unsigned aab IPTV-v0.5.4-Android-release-UNSIGNED.aab
+          copy_one iptv-android-tv-debug-apk apk IPTV-v0.5.4-AndroidTV-debug.apk
+          copy_one iptv-android-tv-release-aab-unsigned aab IPTV-v0.5.4-AndroidTV-release-UNSIGNED.aab
+          copy_one iptv-lg-webos-ipk ipk IPTV-v0.5.4-LG-webOS.ipk
+          for exe in IPTV-Setup-0.5.4.exe IPTV-Portable-0.5.4.exe; do
             test -s "artifacts/iptv-windows-setup-and-portable/$exe" || {
               echo "::error::Missing Windows release executable $exe"
               exit 1
@@ -388,7 +388,7 @@ jobs:
           done
           test -s artifacts/iptv-samsung-tizen-staging/config.xml
           test -n "$(find artifacts/iptv-ios-simulator-app -type f -name Info.plist -print -quit)"
-          (cd artifacts/iptv-samsung-tizen-staging && zip -qr "$GITHUB_WORKSPACE/release/IPTV-v0.5.3-Samsung-Tizen-STAGING.zip" .)
+          (cd artifacts/iptv-samsung-tizen-staging && zip -qr "$GITHUB_WORKSPACE/release/IPTV-v0.5.4-Samsung-Tizen-STAGING.zip" .)
           mkdir -p ios-simulator-package
           if [ -d artifacts/iptv-ios-simulator-app/App.app ]; then
             cp -a artifacts/iptv-ios-simulator-app/App.app ios-simulator-package/
@@ -397,12 +397,12 @@ jobs:
             cp -a artifacts/iptv-ios-simulator-app/. ios-simulator-package/App.app/
           fi
           test -s ios-simulator-package/App.app/Info.plist
-          (cd ios-simulator-package && zip -qr "$GITHUB_WORKSPACE/release/IPTV-v0.5.3-iOS-Simulator-UNSIGNED.zip" App.app)
+          (cd ios-simulator-package && zip -qr "$GITHUB_WORKSPACE/release/IPTV-v0.5.4-iOS-Simulator-UNSIGNED.zip" App.app)
           test "$(find release -maxdepth 1 -type f -name '*.exe' | wc -l)" -eq 2
           for archive in release/*.apk release/*.aab release/*.zip; do
             unzip -tq "$archive" >/dev/null
           done
-          (cd release && sha256sum IPTV-v0.5.3-* IPTV-Setup-0.5.3.exe IPTV-Portable-0.5.3.exe > SHA256SUMS.txt)
+          (cd release && sha256sum IPTV-v0.5.4-* IPTV-Setup-0.5.4.exe IPTV-Portable-0.5.4.exe > SHA256SUMS.txt)
           test "$(wc -l < release/SHA256SUMS.txt)" -eq 9
           test "$(find release -maxdepth 1 -type f | wc -l)" -eq 10
           ls -lh release/
@@ -413,13 +413,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          gh release create v0.5.3 release/* \
+          gh release create v0.5.4 release/* \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
-            --title "IPTV v0.5.3 — Cross-platform Preview" \
-            --notes-file docs/releases/v0.5.3.md \
+            --title "IPTV v0.5.4 — Cross-platform Preview" \
+            --notes-file docs/releases/v0.5.4.md \
             --prerelease
-          echo "Published https://github.com/$GITHUB_REPOSITORY/releases/tag/v0.5.3"
+          echo "Published https://github.com/$GITHUB_REPOSITORY/releases/tag/v0.5.4"
       - name: Verify GitHub release assets
         if: steps.existing.outputs.present == 'false'
         shell: bash
@@ -427,7 +427,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          gh release view v0.5.3 --repo "$GITHUB_REPOSITORY" --json tagName,isPrerelease,assets \
+          gh release view v0.5.4 --repo "$GITHUB_REPOSITORY" --json tagName,isPrerelease,assets \
             --jq '{tag:.tagName,prerelease:.isPrerelease,asset_names:[.assets[].name]}'
-          count="$(gh release view v0.5.3 --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets | length')"
+          count="$(gh release view v0.5.4 --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets | length')"
           test "$count" -eq 10 || { echo "::error::Expected ten release assets, received $count"; exit 1; }

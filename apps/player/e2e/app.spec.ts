@@ -79,7 +79,7 @@ test('mobile navigation, categories and empty states remain functional',async({p
   await expect(page.getByRole('button',{name:'Watch Example Sport'})).toBeVisible();
 });
 
-test('failed native stream automatically selects the next source', async ({page,isMobile}) => {
+test('failed video stream automatically selects the next source', async ({page,isMobile}) => {
   test.skip(isMobile,'Desktop player failover scenario');
   await page.route('https://example.test/sport-source-a.mp4', route => route.abort('failed'));
   await page.route('https://example.test/sport-source-b.mp4', route =>
@@ -113,4 +113,38 @@ test('app-only player does not expose browser sharing controls', async ({page}) 
   await page.getByRole('button', {name:'Watch Example News'}).first().click();
   await expect(page.getByRole('region',{name:'Now watching'})).toBeVisible();
   await expect(page.getByRole('button',{name:'Copy channel link'})).toHaveCount(0);
+});
+
+test('TV guide retries a second published XMLTV provider without inventing titles', async ({page,isMobile}) => {
+  test.skip(isMobile,'Desktop EPG provider failover scenario');
+  await page.route('https://iptv-org.github.io/api/guides.json', route =>
+    route.fulfill({json:[{channel:'HRNews.hr',site:'fixture',site_id:'HRNews.hr',lang:'hr',
+      sources:[
+        {format:'XML',url:'https://example.test/temporarily-offline.xml'},
+        {format:'XML',url:'https://example.test/programmes.xml'}
+      ]}]}));
+  await page.route('https://example.test/temporarily-offline.xml', route =>
+    route.fulfill({status:503,body:'Service unavailable'}));
+  await page.goto('/');
+  await page.getByRole('navigation',{name:'All sections'}).getByRole('button',{name:'TV Guide'}).click();
+  await page.getByRole('button',{name:'Watch Example News'}).click();
+  await expect(page.getByText('Example Headlines')).toBeVisible();
+  await expect(page.getByRole('region',{name:'Electronic programme guide'}).getByRole('combobox')).toHaveValue('1');
+  await expect(page.getByText('Made-up programme')).toHaveCount(0);
+});
+
+test('unsupported video decoding automatically switches to a playable source',async({page,isMobile})=>{
+  test.skip(isMobile,'Desktop unsupported video source scenario');
+  await page.addInitScript(()=>{
+    const original=HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play=function(){
+      if(this.src.includes('sport-source-a.mp4'))
+        return Promise.reject(new DOMException('Unsupported codec','NotSupportedError'));
+      return original.call(this);
+    };
+  });
+  await page.goto('/');
+  await page.getByRole('navigation',{name:'All sections'}).getByRole('button',{name:'Live TV'}).click();
+  await page.getByRole('button',{name:'Watch Example Sport'}).click();
+  await expect(page.locator('.source-select select')).toHaveValue('1',{timeout:15000});
 });

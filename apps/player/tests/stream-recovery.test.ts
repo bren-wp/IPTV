@@ -30,3 +30,9 @@ test('HLS recovery is attempted at most once per problem category', () => {
   assert.equal(shouldRecoverHls('networkError',true),false);
   assert.equal(shouldRecoverHls('otherError',false),false);
 });
+
+test('skips MPEG-DASH alternatives that the current player cannot decode', () => {
+  const list = [source('one'), {...source('dash'), url:'https://example.com/manifest.mpd?token=abc'}, source('three')];
+  assert.equal(nextStreamIndex(list,0,new Set([list[0].url])),2);
+  assert.equal(nextStreamIndex(list,0,new Set([list[0].url,list[2].url])),null);
+});

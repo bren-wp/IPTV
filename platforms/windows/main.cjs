@@ -65,6 +65,11 @@ async function start() {
       devTools: !app.isPackaged
     }
   });
+  // IPTV plays remote media but never needs device sensors, capture or
+  // privileged permissions. Deny unsolicited site permission requests.
+  const session = window.webContents.session;
+  session.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
+  session.setPermissionCheckHandler(() => false);
   window.webContents.setWindowOpenHandler(({ url }) => {
     openSafeLink(url);
     return { action: 'deny' };

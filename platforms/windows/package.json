@@ -1,6 +1,6 @@
 {
   "name": "@brendigo/iptv-windows",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "private": true,
   "description": "IPTV desktop player for Windows 10 and Windows 11",
   "main": "main.cjs",

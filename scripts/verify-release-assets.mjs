@@ -21,6 +21,15 @@ async function nonEmpty(path) {
 }
 const base = join(root, 'platforms', target);
 const web = join(base, ['lg-webos', 'samsung-tizen'].includes(target) ? 'staging' : 'dist');
+// Every distribution must contain its own UI bundle and offline channel index.
+// No runtime dependency on a separately hosted IPTV website is permitted.
+await nonEmpty(join(web, 'index.html'));
+await nonEmpty(join(web, 'catalog.json'));
+const page = await readFile(join(web, 'index.html'), 'utf8');
+if (!page.includes('assets/') || /<script[^>]+src=["']https?:\/\//i.test(page) ||
+    /<script[^>]+src=["']\/src\//i.test(page)) {
+  throw new Error('A platform app is missing its locally bundled application code.');
+}
 if (['lg-webos', 'samsung-tizen'].includes(target)) {
   await nonEmpty(join(web, 'index.html'));
   await nonEmpty(join(web, 'catalog.json'));
@@ -30,7 +39,7 @@ if (target === 'lg-webos') {
   for (const key of ['id', 'title', 'main', 'icon', 'largeIcon', 'version']) {
     if (!info[key]) throw new Error('Missing webOS app metadata: ' + key);
   }
-  if (info.version !== '0.5.3') throw new Error('webOS version mismatch.');
+  if (info.version !== '0.5.4') throw new Error('webOS version mismatch.');
   await png(join(web, info.icon), 80);
   await png(join(web, info.largeIcon), 130);
 }
@@ -38,7 +47,7 @@ if (target === 'samsung-tizen') {
   const xml = await readFile(join(web, 'config.xml'), 'utf8');
   if (!xml.includes('tizen:profile name="tv-samsung"') ||
       !xml.includes('<icon src="icon.png"/>') ||
-      !xml.includes('version="0.5.3"')) throw new Error('Tizen TV metadata mismatch.');
+      !xml.includes('version="0.5.4"')) throw new Error('Tizen TV metadata mismatch.');
   await png(join(web, 'icon.png'), 117);
 }
 if (target === 'windows') {
@@ -54,7 +63,7 @@ if (target === 'windows') {
 if (target === 'ios') await png(join(base, 'ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png'), 1024);
 if (target === 'android' || target === 'android-tv') {
   const gradle = await readFile(join(base, 'android/app/build.gradle'), 'utf8');
-  if (!/versionCode\s+503/.test(gradle) || !/versionName\s+"0.5.3"/.test(gradle)) {
+  if (!/versionCode\s+504/.test(gradle) || !/versionName\s+"0.5.4"/.test(gradle)) {
     throw new Error('Android release version has not been configured.');
   }
   await png(join(base, 'android/app/src/main/res/mipmap-mdpi/ic_launcher.png'), 48);

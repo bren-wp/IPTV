@@ -6,7 +6,9 @@ export function nextStreamIndex(streams: readonly Stream[], currentIndex: number
   for (let offset = 1; offset < streams.length; offset++) {
     const index = (currentIndex + offset) % streams.length;
     const candidate = streams[index];
-    if (candidate && !tried.has(candidate.url) && !candidate.requiresHeaders) return index;
+    // The player does not implement MPEG-DASH; do not waste a retry on an .mpd URL.
+    if (candidate && !tried.has(candidate.url) && !candidate.requiresHeaders &&
+        !new URL(candidate.url).pathname.toLowerCase().endsWith('.mpd')) return index;
   }
   return null;
 }
