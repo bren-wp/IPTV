@@ -24,3 +24,13 @@ test('now and next programmes use half-open ranges', () => {
   assert.equal(schedule.current?.title,'Live');
   assert.deepEqual(schedule.next.map(p=>p.title),['Upcoming']);
 });
+
+test('original guide titles advance across actual schedule boundaries', () => {
+  const programmes = [
+    {title:'Published morning programme',start:10000,stop:20000,subtitle:null,description:null,category:null},
+    {title:'Published midday programme',start:20000,stop:30000,subtitle:null,description:null,category:null}
+  ];
+  assert.equal(splitProgrammeSchedule(programmes,19999).current?.title,'Published morning programme');
+  assert.equal(splitProgrammeSchedule(programmes,20000).current?.title,'Published midday programme');
+  assert.equal(splitProgrammeSchedule(programmes,30000).current,null);
+});

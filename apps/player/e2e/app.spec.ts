@@ -107,3 +107,10 @@ test('when the main catalog API is offline, valid hourly GitHub snapshot restore
   await expect(page.getByRole('button',{name:'Watch Verified Backup TV'}).first()).toBeVisible();
 });
 
+
+test('app-only player does not expose browser sharing controls', async ({page}) => {
+  await page.goto('/');
+  await page.getByRole('button', {name:'Watch Example News'}).first().click();
+  await expect(page.getByRole('region',{name:'Now watching'})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Copy channel link'})).toHaveCount(0);
+});
