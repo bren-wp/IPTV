@@ -21,6 +21,15 @@ async function nonEmpty(path) {
 }
 const base = join(root, 'platforms', target);
 const web = join(base, ['lg-webos', 'samsung-tizen'].includes(target) ? 'staging' : 'dist');
+// Every distribution must contain its own UI bundle and offline channel index.
+// No runtime dependency on a separately hosted IPTV website is permitted.
+await nonEmpty(join(web, 'index.html'));
+await nonEmpty(join(web, 'catalog.json'));
+const page = await readFile(join(web, 'index.html'), 'utf8');
+if (!page.includes('assets/') || /<script[^>]+src=["']https?:\/\//i.test(page) ||
+    /<script[^>]+src=["']\/src\//i.test(page)) {
+  throw new Error('A platform app is missing its locally bundled application code.');
+}
 if (['lg-webos', 'samsung-tizen'].includes(target)) {
   await nonEmpty(join(web, 'index.html'));
   await nonEmpty(join(web, 'catalog.json'));

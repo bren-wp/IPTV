@@ -220,3 +220,10 @@ test('fresh verified catalog avoids four heavyweight API downloads',async()=>{
     assert.deepEqual(requested,[REMOTE_SNAPSHOT]);
   }finally{globalThis.fetch=original;}
 });
+
+test('cached catalog rejects missing programme names',()=>{
+  const valid=buildCatalog(metadata,streams,[]);
+  const missing=structuredClone(valid);
+  missing.channels[0].name=' ';
+  assert.equal(isCatalog(missing),false);
+});

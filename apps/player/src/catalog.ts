@@ -154,7 +154,7 @@ export function buildCatalog(
 export function isCatalog(value: unknown): value is Catalog {
   if (!isRecord(value) || value.version !== 1 || !Array.isArray(value.channels)) return false;
   return value.channels.every((ch: unknown) =>
-    isRecord(ch) && typeof ch.id === 'string' && typeof ch.name === 'string' &&
+    isRecord(ch) && typeof ch.id === 'string' && typeof ch.name === 'string' && ch.name.trim().length > 0 &&
     typeof ch.country === 'string' && Array.isArray(ch.categories) &&
     Array.isArray(ch.streams) && ch.streams.length > 0 &&
     ch.streams.every((s: unknown) => isRecord(s) && Boolean(safeMediaUrl(s.url))) &&
