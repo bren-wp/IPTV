@@ -16,6 +16,7 @@ on:
       - '.github/workflows/release-distributions.yml'
       - 'docs/releases/**'
       - 'scripts/prepare-web-public.mjs'
+      - 'scripts/hosting/**'
       - '.github/workflows/deploy-web.yml'
   pull_request:
     paths:
@@ -31,6 +32,7 @@ on:
       - '.github/workflows/release-distributions.yml'
       - 'docs/releases/**'
       - 'scripts/prepare-web-public.mjs'
+      - 'scripts/hosting/**'
       - '.github/workflows/deploy-web.yml'
   workflow_dispatch:
 
@@ -76,7 +78,14 @@ jobs:
           node scripts/prepare-web-public.mjs
           test -s apps/player/dist/api/catalog.json
           test -s apps/player/dist/api/status.json
+          test -s apps/player/dist/playlist.m3u
+          test -s apps/player/dist/api/playlist.m3u
+          test -s apps/player/dist/.htaccess
+          test -f apps/player/dist/.nojekyll
           cmp apps/player/dist/catalog.json apps/player/dist/api/catalog.json
+          cmp apps/player/dist/playlist.m3u apps/player/dist/api/playlist.m3u
+          head -n 1 apps/player/dist/playlist.m3u | grep -qx '#EXTM3U'
+          node -e "const fs=require('node:fs');const p=JSON.parse(fs.readFileSync('apps/player/dist/api/status.json'));if(p.playlistChannelCount<1||p.playlistChannelCount>p.channelCount)process.exit(1)"
       - name: Prepare separate web and Smart TV bundles
         run: node scripts/prepare-platform.mjs web samsung-tizen lg-webos
       - name: Generate platform icons
