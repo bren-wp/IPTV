@@ -5,6 +5,7 @@ import { newestCatalog, readStoredCatalog, saveStoredCatalog } from './catalog-s
 import { channelsForView, formatChannelCount, recommendedChannels, VIEW_LABELS } from './navigation';
 import type { View } from './navigation';
 import Player from './Player';
+import { channelFromQuery, channelLink } from './deep-link';
 import { nextStreamIndex } from './stream-recovery';
 import EpgGuide from './EpgGuide';
 
@@ -132,6 +133,8 @@ export default function App(){
   const [guideOpen,setGuideOpen]=useState(false);
   const [page,setPage]=useState(1);
   const playerRef=useRef<HTMLElement|null>(null);
+  const deepLinkHandledRef=useRef(false);
+  const [shareMessage,setShareMessage]=useState('');
   const failedStreamUrlsRef=useRef<Set<string>>(new Set());
   const inFlightRef=useRef(false);
   const lastAttemptRef=useRef(0);
@@ -206,6 +209,18 @@ export default function App(){
   const visible=filtered.slice(0,PAGE_SIZE*page);
 
   useEffect(()=>setPage(1),[query,country,category,view]);
+  // Keep the URL-based entry point portable: only resolve IDs that are present
+  // in the validated directory; never accept an arbitrary stream URL from query.
+  useEffect(()=>{
+    if(deepLinkHandledRef.current || channels.length === 0) return;
+    const requested=channelFromQuery(window.location.search);
+    if(!requested) { deepLinkHandledRef.current=true; return; }
+    const match=byId.get(requested);
+    if(!match) return; // An hourly catalog refresh may still add this channel.
+    deepLinkHandledRef.current=true;
+    failedStreamUrlsRef.current=new Set();
+    setSelectedId(match.id);setStreamIndex(0);setView('live');
+  },[byId,channels.length]);
   useEffect(()=>{if(selectedId&&stream)playerRef.current?.scrollIntoView({behavior:'smooth',block:'start'});},[selectedId,stream]);
   const back=useCallback(()=>{if(selectedId){setSelectedId(null);setGuideOpen(false);}else setView('home');},[selectedId]);
   useRemoteNavigation(back);
@@ -216,12 +231,22 @@ export default function App(){
     window.scrollTo({top:0,behavior:'smooth'});
   }
   function playChannel(ch:Channel,showGuide=false):void {
+    setShareMessage('');
     failedStreamUrlsRef.current=new Set();
     setSelectedId(ch.id);setStreamIndex(0);setGuideOpen(showGuide);
     setRecent(old=>{
       const next=[ch.id,...old.filter(id=>id!==ch.id)].slice(0,24);
       persist(RECENT_KEY,JSON.stringify(next));return next;
     });
+  }
+  async function copyChannelLink():Promise<void> {
+    if(!selected || typeof navigator.clipboard?.writeText !== 'function') {
+      setShareMessage('Clipboard unavailable'); return;
+    }
+    try {
+      await navigator.clipboard.writeText(channelLink(window.location.href,selected.id));
+      setShareMessage('Link copied');
+    } catch { setShareMessage('Could not copy link'); }
   }
   function autoNextStream():boolean {
     if(!selected||!stream)return false;
@@ -297,6 +322,10 @@ export default function App(){
             <div className="player-options-actions">
               <button type="button" className="outline-button" aria-expanded={guideOpen} onClick={()=>setGuideOpen(o=>!o)}><Icon name="guide" size={16}/>{guideOpen?'Hide schedule':'TV guide'}</button>
               <button type="button" className="outline-button" aria-pressed={favorites.has(selected.id)} onClick={()=>toggleFavorite(selected.id)}><Icon name="heart" size={16}/>{favorites.has(selected.id)?'Saved':'Add to My List'}</button>
+              {(window.location.protocol==='https:' || window.location.protocol==='http:') &&
+                <button type="button" className="outline-button" onClick={()=>void copyChannelLink()}>
+                  <Icon name="arrow" size={16}/>{shareMessage || 'Copy channel link'}
+                </button>}
               {selected.streams.length>1&&<label className="source-select">Source <select value={streamIndex} onChange={e=>manuallySelectStream(Number(e.target.value))}>{selected.streams.map((s,i)=><option key={s.url} value={i}>{s.quality??'Stream'} {i+1} · {s.title}</option>)}</select></label>}
             </div>
           </div>
