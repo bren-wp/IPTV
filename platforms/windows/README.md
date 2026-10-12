@@ -28,3 +28,5 @@ These are **unsigned evaluation binaries** until an authorized Authenticode cert
 The Windows app does not expose Node APIs to the web interface. All content is hosted by a restricted local `iptv://app` protocol with standard browser CORS enabled. External HTTPS links open in the system browser; navigation is blocked within the desktop window. Remote live channel and guide servers may reject streams or block CORS. Stream DRM is not bypassed.
 
 To smoke test the **actual packaged portable EXE** in CI, pass `--smoke-test`; the app loads its bundled index and verifies the IPTV React interface mounts before exiting with an appropriate status.
+
+**Shared experience:** Windows Setup and Portable include the same player, EPG and catalogue update logic as the [public website](../../docs/WEB_HOSTING.md). The website's optional API/M3U endpoints do not require Windows to be installed.

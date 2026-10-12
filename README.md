@@ -12,6 +12,11 @@
 
 **Android · iOS · Android TV · Samsung Smart TV · LG Smart TV · Web · Windows**
 
+[**Latest preview release**](https://github.com/bren-wp/IPTV/releases/latest) ·
+[**Publish website**](docs/WEB_HOSTING.md) ·
+[**Marketing kit**](docs/MARKETING.md) ·
+[**Developer documentation**](docs/INDEX.md)
+
 </div>
 
 ---
@@ -20,7 +25,9 @@
 
 Discover publicly accessible live-TV channels in one beautifully organized interface. Search across countries and categories, switch between available broadcasts, and keep the channels you love close.
 
-Designed for a wide range of screens, from your phone to your living-room TV.
+Designed for a wide range of screens — from your phone and laptop to your living-room TV. Shared code, consistent navigation and one refined interface.
+
+**Find your channels. Save your favorites. Keep watching.** IPTV is a streaming player and directory: it does not sell television subscriptions or host broadcaster video.
 
 ### Highlights
 
@@ -47,11 +54,27 @@ The channel tiles reflect actual live streams and their metadata. Movies and Ser
 - **Resilient by default.** Multiple stream choices where available, bounded HLS recovery, automatic source switching on failure, URL validation and cached directory fallback.
 - **Privacy-minded.** No built-in advertising SDK or analytics tracking.
 
+## Website-ready: IPTV on your own domain
+
+Upload a production website ZIP directly to the document root of a subdomain such as `iptv.icode.com.hr`. The same web files work on Apache/cPanel, DirectAdmin, generic HTTPS hosting or GitHub Pages, with no PHP and no database.
+
+| Public path | What it contains |
+| --- | --- |
+| `/` | Full responsive app |
+| `/?channel=CHANNEL_ID` | Shareable link to a listed channel |
+| `/catalog.json`, `/api/catalog.json` | Read-only verified JSON directory |
+| `/playlist.m3u`, `/api/playlist.m3u` | Public HTTPS HLS channel-link index |
+| `/api/status.json` | Snapshot age, channel count and exportable-playlist count |
+
+The in-app directory refreshes periodically and retains a last-valid local snapshot. **For your hosted public M3U/JSON files to update automatically, configure hourly redeployment**, either through [GitHub Pages](.github/workflows/deploy-web.yml) or [protected SSH hosting deployment](.github/workflows/deploy-shared-hosting.yml). A one-time ZIP upload is a static snapshot.
+
+[**English hosting, HTTPS and DNS guide →**](docs/WEB_HOSTING.md) · [**Hrvatske upute za postavljanje →**](docs/POSTAVLJANJE-WEB-HR.md)
+
 ## Public web application
 
 The responsive player is ready to deploy as a real HTTPS website through the [GitHub Pages workflow](.github/workflows/deploy-web.yml). The default GitHub Pages URL, **once Pages is enabled**, is `https://bren-wp.github.io/IPTV/`; a custom address such as `https://iptv.icode.com.hr/` requires verified domain ownership, DNS and HTTPS configuration.
 
-The public website also publishes read-only channel metadata at `/catalog.json`, `/api/catalog.json` and `/api/status.json`. It checks for refreshed snapshots hourly after the catalog synchronization. Refer to the [public hosting and DNS instructions](docs/WEB_HOSTING.md) for setup, verification, cache behavior and rights considerations.
+The public website also publishes read-only channel metadata at `/catalog.json`, `/api/catalog.json`, `/playlist.m3u`, `/api/playlist.m3u` and `/api/status.json`. It checks for refreshed snapshots hourly after the catalog synchronization. Refer to the [public hosting and DNS instructions](docs/WEB_HOSTING.md) for setup, verification, cache behavior and rights considerations.
 
 ## Platforms
 
@@ -167,6 +190,12 @@ These preview binaries are not certified, production-signed app-store submission
 ## Downloads and development builds
 
 Open [**GitHub Actions → Player CI**](https://github.com/bren-wp/IPTV/actions/workflows/player-ci.yml) to find the artifacts produced by successful builds. Debug APKs are for testing; iOS Simulator artifacts are not signed IPA files.
+
+## Marketing and brand assets
+
+The IPTV visual system uses deep navy surfaces, electric-blue accents, a consistent TV/play icon and responsive focus states. [Brand and product marketing copy](docs/MARKETING.md) includes accurate store-listing text, feature messaging and website headlines. The [design system](docs/UI_BRAND_GUIDE.md) provides UI patterns and color tokens.
+
+All screenshots advertised as real must come from a tested application build. The repository does not present concept artwork as live screenshots or imply approval by a broadcaster or app store.
 
 ## Production distribution
 
