@@ -23,6 +23,7 @@ export default function Player({ stream, channelName, onNextStream, onAutoNext, 
     let stopped = false;
     let failed = false;
     let mediaWasPlaying = false;
+    let everPlayed = false;
     let stallTimer: ReturnType<typeof setTimeout> | null = null;
     let startupTimer: ReturnType<typeof setTimeout> | null = null;
     let autoplayBlocked = false;
@@ -44,7 +45,7 @@ export default function Player({ stream, channelName, onNextStream, onAutoNext, 
       startupTimer = setTimeout(() => {
         startupTimer = null;
         if (!stopped && !failed && !autoplayBlocked && document.visibilityState !== 'hidden') {
-          fail('The channel did not start in time. Trying another available source.');
+          fail('The channel did not start in time.');
         }
       }, 30_000);
     }
@@ -67,7 +68,8 @@ export default function Player({ stream, channelName, onNextStream, onAutoNext, 
       setError(message);
     }
     function beginStallWatch(): void {
-      if (stopped || failed || readyVideo.paused || !mediaWasPlaying || stallTimer !== null) return;
+      if (stopped || failed || document.visibilityState === 'hidden' ||
+          readyVideo.paused || !mediaWasPlaying || stallTimer !== null) return;
       stallTimer = setTimeout(() => {
         stallTimer = null;
         fail('Playback stalled. Check your connection or select another source.');
@@ -75,6 +77,7 @@ export default function Player({ stream, channelName, onNextStream, onAutoNext, 
     }
     function onPlaying(): void {
       mediaWasPlaying = true;
+      everPlayed = true;
       autoplayBlocked = false;
       clearStartup();
       clearStall();
@@ -85,6 +88,16 @@ export default function Player({ stream, channelName, onNextStream, onAutoNext, 
       clearStall(); // Intentional pauses never force a stream failover.
     }
     function onWaiting(): void { beginStallWatch(); }
+    function onVisibilityChange(): void {
+      if (document.visibilityState === 'hidden') {
+        clearStartup();
+        clearStall();
+      } else if (!stopped && !failed && !autoplayBlocked) {
+        // TV suspend/resume must not count time spent in the background as a stalled stream.
+        if (!everPlayed) watchStartup();
+        else if (!readyVideo.paused && readyVideo.readyState < 3) beginStallWatch();
+      }
+    }
     function onNativeError(): void {
       // HLS.js handles its own recoverable network and media events.
       if (!hls) fail('Playback failed. This stream may be unavailable or unsupported.');
@@ -96,6 +109,7 @@ export default function Player({ stream, channelName, onNextStream, onAutoNext, 
     readyVideo.addEventListener('waiting', onWaiting);
     readyVideo.addEventListener('stalled', onWaiting);
     readyVideo.addEventListener('error', onNativeError);
+    document.addEventListener('visibilitychange', onVisibilityChange);
 
     const path = new URL(stream.url).pathname.toLowerCase();
     const isHls = path.endsWith('.m3u8');
@@ -151,6 +165,7 @@ export default function Player({ stream, channelName, onNextStream, onAutoNext, 
       readyVideo.removeEventListener('waiting', onWaiting);
       readyVideo.removeEventListener('stalled', onWaiting);
       readyVideo.removeEventListener('error', onNativeError);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       readyVideo.pause();
       hls?.destroy();
       readyVideo.removeAttribute('src');

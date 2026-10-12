@@ -100,7 +100,7 @@ function ChannelCard({channel,onPlay,onFavorite,isFavorite,isSelected}:{
         <span className="media-art-pattern" aria-hidden="true"/>
         <span className="media-logo">
           <span className="media-monogram">{channel.name.slice(0,2).toUpperCase()}</span>
-          {channel.logo && <img src={channel.logo} alt="" loading="lazy" onError={e=>{e.currentTarget.style.display='none';}}/>}
+          {channel.logo && <img src={channel.logo} alt="" loading="lazy" referrerPolicy="no-referrer" decoding="async" onError={e=>{e.currentTarget.style.display='none';}}/>}
         </span>
         <span className="media-play"><Icon name="play" size={26}/></span>
         <span className="live-chip"><span className="live-pin"/>LIVE TV</span>

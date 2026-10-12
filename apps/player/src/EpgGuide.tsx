@@ -31,35 +31,40 @@ export default function EpgGuide({ channel }: { channel: Channel }) {
   useEffect(() => {
     if (!source) return;
     const controller = new AbortController();
+    let active = true;
+    let timedOut = false;
     // Fetch only after explicitly opening a guide for a channel.
     setBusy(true);
     setError('');
     setProgrammes([]);
-    const timeout = setTimeout(() => controller.abort(), 20_000);
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 20_000);
+    const tryNextSource = (): boolean => {
+      if (sourceIndex + 1 >= sources.length) return false;
+      setSourceIndex(sourceIndex + 1);
+      return true;
+    };
     void loadProgrammeGuide(channel, source, controller.signal).then(items => {
-      if (controller.signal.aborted) return;
-      if (!items.length && sourceIndex + 1 < sources.length) {
-        setSourceIndex(index => index + 1);
-        return;
-      }
+      if (!active || controller.signal.aborted) return;
+      if (!items.length && tryNextSource()) return;
       setProgrammes(items);
       setClock(Date.now());
       if (!items.length) setError('No matching programmes are available from the published XMLTV guides.');
     }).catch(e => {
-      if (!controller.signal.aborted) {
-        if (sourceIndex + 1 < sources.length) {
-          setSourceIndex(index => index + 1);
-        } else {
-          setError(e instanceof TypeError
-            ? 'Guide providers may be unreachable or block cross-origin requests (CORS).'
-            : e instanceof Error ? e.message : 'No available published programme guide.');
-        }
-      }
+      if (!active || (controller.signal.aborted && !timedOut)) return;
+      if (tryNextSource()) return;
+      setError(timedOut
+        ? 'The published guide did not respond in time. Please retry later.'
+        : e instanceof TypeError
+          ? 'Guide providers may be unreachable or block cross-origin requests (CORS).'
+          : e instanceof Error ? e.message : 'No available published programme guide.');
     }).finally(() => {
       clearTimeout(timeout);
-      if (!controller.signal.aborted) setBusy(false);
+      if (active) setBusy(false);
     });
-    return () => { clearTimeout(timeout); controller.abort(); };
+    return () => { active = false; clearTimeout(timeout); controller.abort(); };
   }, [channel, source, sourceIndex, sources.length]);
 
   if (!sources.length) return (

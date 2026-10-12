@@ -114,3 +114,21 @@ test('app-only player does not expose browser sharing controls', async ({page}) 
   await expect(page.getByRole('region',{name:'Now watching'})).toBeVisible();
   await expect(page.getByRole('button',{name:'Copy channel link'})).toHaveCount(0);
 });
+
+test('TV guide retries a second published XMLTV provider without inventing titles', async ({page,isMobile}) => {
+  test.skip(isMobile,'Desktop EPG provider failover scenario');
+  await page.route('https://iptv-org.github.io/api/guides.json', route =>
+    route.fulfill({json:[{channel:'HRNews.hr',site:'fixture',site_id:'HRNews.hr',lang:'hr',
+      sources:[
+        {format:'XML',url:'https://example.test/temporarily-offline.xml'},
+        {format:'XML',url:'https://example.test/programmes.xml'}
+      ]}]}));
+  await page.route('https://example.test/temporarily-offline.xml', route =>
+    route.fulfill({status:503,body:'Service unavailable'}));
+  await page.goto('/');
+  await page.getByRole('navigation',{name:'All sections'}).getByRole('button',{name:'TV Guide'}).click();
+  await page.getByRole('button',{name:'Watch Example News'}).click();
+  await expect(page.getByText('Example Headlines')).toBeVisible();
+  await expect(page.getByRole('region',{name:'Electronic programme guide'}).getByRole('combobox')).toHaveValue('1');
+  await expect(page.getByText('Made-up programme')).toHaveCount(0);
+});
