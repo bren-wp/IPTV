@@ -169,7 +169,12 @@ export default function App(){
     };
     void loadCachedCatalog(controller.signal).then(revealCached).catch(()=>{});
     void readStoredCatalog().then(revealCached).catch(()=>{});
-    void refresh(controller.signal);
+    // StrictMode can mount/cleanup/remount effects synchronously. Defer the
+    // request until after cleanup, so an obsolete in-flight refresh cannot
+    // prevent the active app instance from ever loading its channel list.
+    const initialRefresh = window.setTimeout(() => {
+      if (!controller.signal.aborted) void refresh(controller.signal);
+    }, 0);
     // Visibility, network reconnection and a low-cost timer complement the
     // server-side hourly sync. Offline and hidden apps do not hammer hosts.
     const check=()=>{
@@ -182,7 +187,7 @@ export default function App(){
     window.addEventListener('online',check);
     window.addEventListener('focus',check);
     return ()=>{
-      controller.abort();window.clearInterval(timer);
+      controller.abort();window.clearTimeout(initialRefresh);window.clearInterval(timer);
       document.removeEventListener('visibilitychange',check);
       window.removeEventListener('online',check);
       window.removeEventListener('focus',check);
