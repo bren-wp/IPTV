@@ -117,6 +117,7 @@ jobs:
         with:
           name: iptv-web
           path: platforms/web/dist/
+          include-hidden-files: true
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
