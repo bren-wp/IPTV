@@ -7,6 +7,7 @@ on:
       - 'apps/player/**'
       - '!apps/player/public/catalog.json'
       - 'scripts/prepare-web-public.mjs'
+      - 'scripts/hosting/**'
       - '.github/workflows/deploy-web.yml'
   schedule:
     # Catalog sync attempts to run at minute 19; deploy a fresh snapshot afterwards.
@@ -61,9 +62,14 @@ jobs:
           test -s apps/player/dist/catalog.json
           test -s apps/player/dist/api/catalog.json
           test -s apps/player/dist/api/status.json
+          test -s apps/player/dist/api/playlist.m3u
+          test -s apps/player/dist/playlist.m3u
+          test -s apps/player/dist/.htaccess
+          test -f apps/player/dist/.nojekyll
           test -s apps/player/dist/brand-symbol.svg
           cmp apps/player/dist/catalog.json apps/player/dist/api/catalog.json
-          node -e "const fs=require('fs');const x=JSON.parse(fs.readFileSync('apps/player/dist/api/status.json'));if(x.version!==1||x.channelCount<1||x.status!=='ok')process.exit(1);console.log(x)"
+          cmp apps/player/dist/playlist.m3u apps/player/dist/api/playlist.m3u
+          node -e "const fs=require('fs');const x=JSON.parse(fs.readFileSync('apps/player/dist/api/status.json'));if(x.version!==1||x.channelCount<1||x.playlistChannelCount<1||x.status!=='ok')process.exit(1);console.log(x)"
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload site artifact
