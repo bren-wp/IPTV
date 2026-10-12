@@ -18,8 +18,8 @@ npm --prefix platforms/windows run build:win
 
 Outputs are created separately under `platforms/windows/outputs/`:
 
-- `IPTV-Setup-0.5.3.exe` — installer with Start Menu and optional desktop shortcut
-- `IPTV-Portable-0.5.3.exe` — standalone portable Windows executable
+- `IPTV-Setup-0.5.4.exe` — installer with Start Menu and optional desktop shortcut
+- `IPTV-Portable-0.5.4.exe` — standalone portable Windows executable
 
 These are **unsigned evaluation binaries** until an authorized Authenticode certificate is configured. Windows SmartScreen may display an unknown publisher warning. Do not bypass enterprise security policies. Check application rights and test source playback on real Windows hardware prior to distribution.
 

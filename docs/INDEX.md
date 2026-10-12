@@ -6,7 +6,7 @@ The application targets **Android, Android TV, iOS/iPadOS, Windows, Samsung Tize
 - [Main README](../README.md)
 - [Brand guide](UI_BRAND_GUIDE.md)
 - [Marketing and store copy](MARKETING.md)
-- [v0.5.3 release notes](releases/v0.5.3.md)
+- [v0.5.4 release notes](releases/v0.5.4.md)
 - [Production release and signing requirements](PRODUCTION_RELEASE.md)
 - [Playlist source review](GITHUB_SOURCES.md)
 
