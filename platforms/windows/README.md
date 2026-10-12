@@ -29,4 +29,4 @@ The Windows app does not expose Node APIs to the web interface. All content is h
 
 To smoke test the **actual packaged portable EXE** in CI, pass `--smoke-test`; the app loads its bundled index and verifies the IPTV React interface mounts before exiting with an appropriate status.
 
-**Shared experience:** Windows Setup and Portable include the same player, EPG and catalogue update logic as the [public website](../../docs/WEB_HOSTING.md). The website's optional API/M3U endpoints do not require Windows to be installed.
+**Shared experience:** Windows Setup and Portable contain the shared player, XMLTV guide and catalogue updates locally inside the application. A public website or browser distribution is no longer provided.
