@@ -3,10 +3,10 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const allowed = new Set(['web', 'android', 'ios', 'android-tv', 'lg-webos', 'samsung-tizen', 'windows']);
+const allowed = new Set(['android', 'ios', 'android-tv', 'lg-webos', 'samsung-tizen', 'windows']);
 const requested = process.argv.slice(2);
 if (!requested.length || requested.some(target => !allowed.has(target))) {
-  console.error('Usage: node scripts/prepare-platform.mjs web android ios android-tv lg-webos samsung-tizen windows');
+  console.error('Usage: node scripts/prepare-platform.mjs android ios android-tv lg-webos samsung-tizen windows');
   process.exit(2);
 }
 const source = join(root, 'apps/player/dist');

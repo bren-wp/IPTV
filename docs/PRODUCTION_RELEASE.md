@@ -1,6 +1,6 @@
 # Production distribution and release checklist
 
-This document is for maintainers preparing the **0.5.2** release. The source tree includes separate Android, Android TV, iOS, web, Samsung Tizen, LG webOS and Windows configurations. Successful compilation does **not** establish platform approval, broadcaster rights or reliable playback on every target device.
+This document is for maintainers preparing the **0.5.3** release. The source tree includes separate Android, Android TV, iOS, Samsung Tizen, LG webOS and Windows configurations. Successful compilation does **not** establish platform approval, broadcaster rights or reliable playback on every target device.
 
 ## Release gates
 
@@ -66,10 +66,6 @@ Playback depends on third-party remote servers, CORS, geographic authorization, 
 
 No signing secrets, broadcaster distribution licenses or physical-device verification data are present in this repository. Those external requirements must be completed before describing the application as fully production released.
 
-## Website and public playlists
+## App-only distribution
 
-The same UI also supports deployment at a configured HTTPS domain such as `iptv.icode.com.hr`. For a cPanel/Apache environment, publish the contents of the tested web ZIP directly into the subdomain's document root. Verify `index.html`, `assets/`, `catalog.json`, `playlist.m3u`, `api/catalog.json`, `api/playlist.m3u` and `api/status.json`.
-
-Never describe a domain as active before DNS, certificate validity and real HTTP responses have been verified. A static upload does not automatically update publicly hosted playlist files. Select either the enabled GitHub Pages workflow or the protected SSH redeployment workflow when hourly public metadata updates are required.
-
-See [WEB_HOSTING.md](WEB_HOSTING.md) and [POSTAVLJANJE-WEB-HR.md](POSTAVLJANJE-WEB-HR.md). Only approved publicly distributable stream links should be published in public feeds. GitHub and providers may have outages or delayed schedules.
+Standalone web deployment, public playlist feeds and public web ZIP distribution have been removed. The internal React/Vite asset build is still required to package the mobile, TV and Windows apps. Old GitHub releases may retain previously published historical web artifacts; these are not supported app deliveries.

@@ -9,16 +9,24 @@ export default function EpgGuide({ channel }: { channel: Channel }) {
   const [programmes, setProgrammes] = useState<Programme[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [lastChecked, setLastChecked] = useState<number | null>(null);
+  const [clock, setClock] = useState(() => Date.now());
   const source = sources[sourceIndex] as GuideSource | undefined;
-  const schedule = splitProgrammeSchedule(programmes, lastChecked ?? Date.now());
+  const schedule = splitProgrammeSchedule(programmes, clock);
 
   useEffect(() => {
     setSourceIndex(0);
     setProgrammes([]);
     setError('');
-    setLastChecked(null);
+    setClock(Date.now());
   }, [channel.id]);
+
+  // The current programme changes over time without inventing new guide entries.
+  useEffect(() => {
+    const tick = () => { if (document.visibilityState !== 'hidden') setClock(Date.now()); };
+    const timer = window.setInterval(tick, 30_000);
+    document.addEventListener('visibilitychange', tick);
+    return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', tick); };
+  }, []);
 
   useEffect(() => {
     if (!source) return;
@@ -30,20 +38,29 @@ export default function EpgGuide({ channel }: { channel: Channel }) {
     const timeout = setTimeout(() => controller.abort(), 20_000);
     void loadProgrammeGuide(channel, source, controller.signal).then(items => {
       if (controller.signal.aborted) return;
+      if (!items.length && sourceIndex + 1 < sources.length) {
+        setSourceIndex(index => index + 1);
+        return;
+      }
       setProgrammes(items);
-      setLastChecked(Date.now());
-      if (!items.length) setError('No matching programmes are available in this XMLTV source.');
+      setClock(Date.now());
+      if (!items.length) setError('No matching programmes are available from the published XMLTV guides.');
     }).catch(e => {
-      if (!controller.signal.aborted) setError(
-        (e instanceof TypeError ? 'The guide server may block browser requests (CORS), or be unreachable.' :
-          e instanceof Error ? e.message : 'Guide could not be loaded.')
-      );
+      if (!controller.signal.aborted) {
+        if (sourceIndex + 1 < sources.length) {
+          setSourceIndex(index => index + 1);
+        } else {
+          setError(e instanceof TypeError
+            ? 'Guide providers may be unreachable or block cross-origin requests (CORS).'
+            : e instanceof Error ? e.message : 'No available published programme guide.');
+        }
+      }
     }).finally(() => {
       clearTimeout(timeout);
       if (!controller.signal.aborted) setBusy(false);
     });
     return () => { clearTimeout(timeout); controller.abort(); };
-  }, [channel, source]);
+  }, [channel, source, sourceIndex, sources.length]);
 
   if (!sources.length) return (
     <div className="guide-empty">No published XMLTV source is listed for this channel.</div>

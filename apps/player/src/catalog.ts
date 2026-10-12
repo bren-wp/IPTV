@@ -215,7 +215,7 @@ export function bestSnapshot(first: unknown, second: unknown): Catalog | null {
 /** Load the bundled verified snapshot before accessing any external service. */
 export async function loadCachedCatalog(signal?: AbortSignal): Promise<Catalog | null> {
   try {
-    const response = await fetch(CACHE_PATH, { signal, cache: 'no-store' });
+    const response = await fetch(CACHE_PATH, { signal, cache: 'no-store', credentials: 'omit' });
     if (!response.ok) return null;
     const value: unknown = await response.json();
     return isCatalog(value) && value.channels.length > 0 ? value : null;
@@ -225,7 +225,7 @@ export async function loadCachedCatalog(signal?: AbortSignal): Promise<Catalog |
   }
 }
 
-/** The app can refresh without a new release; generated same-origin snapshot remains a fallback. */
+/** The installed app can refresh without a new release; its bundled snapshot remains a fallback. */
 export async function loadCatalog(signal?: AbortSignal): Promise<{ catalog: Catalog; isFallback: boolean }> {
   const fetchJson = async (path: string): Promise<unknown> => {
     // AbortSignal.any/timeout are missing on several older Smart TV WebKit engines.
@@ -235,7 +235,7 @@ export async function loadCatalog(signal?: AbortSignal): Promise<{ catalog: Cata
     signal?.addEventListener('abort', cancel, { once: true });
     if (signal?.aborted) cancel();
     try {
-      const response = await fetch(path, { signal: controller.signal, cache: 'no-store' });
+      const response = await fetch(path, { signal: controller.signal, cache: 'no-store', credentials: 'omit' });
       if (!response.ok) throw new Error('Catalog request failed (' + response.status + ').');
       return await response.json();
     } finally {

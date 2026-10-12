@@ -107,12 +107,10 @@ test('when the main catalog API is offline, valid hourly GitHub snapshot restore
   await expect(page.getByRole('button',{name:'Watch Verified Backup TV'}).first()).toBeVisible();
 });
 
-test('shareable website link opens a verified channel without exposing raw stream tokens',async({page,isMobile})=>{
-  test.skip(isMobile,'Desktop deeplink and player navigation scenario');
-  await page.goto('/?channel=HRNews.hr');
+
+test('app-only player does not expose browser sharing controls', async ({page}) => {
+  await page.goto('/');
+  await page.getByRole('button', {name:'Watch Example News'}).first().click();
   await expect(page.getByRole('region',{name:'Now watching'})).toBeVisible();
-  await expect(page.getByRole('heading',{name:'Example News'})).toBeVisible();
-  await expect(page.getByRole('button',{name:'Copy channel link'})).toBeVisible();
-  await page.goto('/?channel=NotARealChannel.hr');
-  await expect(page.getByRole('region',{name:'Now watching'})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'Copy channel link'})).toHaveCount(0);
 });

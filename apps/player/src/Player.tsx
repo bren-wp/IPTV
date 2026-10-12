@@ -67,7 +67,7 @@ export default function Player({ stream, channelName, onNextStream, onAutoNext, 
       setError(message);
     }
     function beginStallWatch(): void {
-      if (stopped || failed || !mediaWasPlaying || stallTimer !== null) return;
+      if (stopped || failed || readyVideo.paused || !mediaWasPlaying || stallTimer !== null) return;
       stallTimer = setTimeout(() => {
         stallTimer = null;
         fail('Playback stalled. Check your connection or select another source.');
@@ -80,12 +80,17 @@ export default function Player({ stream, channelName, onNextStream, onAutoNext, 
       clearStall();
       if (!stopped) setNotice('');
     }
+    function onPause(): void {
+      mediaWasPlaying = false;
+      clearStall(); // Intentional pauses never force a stream failover.
+    }
     function onWaiting(): void { beginStallWatch(); }
     function onNativeError(): void {
       // HLS.js handles its own recoverable network and media events.
       if (!hls) fail('Playback failed. This stream may be unavailable or unsupported.');
     }
     readyVideo.addEventListener('playing', onPlaying);
+    readyVideo.addEventListener('pause', onPause);
     function onPlay(): void { if (autoplayBlocked) { autoplayBlocked = false; watchStartup(); } }
     readyVideo.addEventListener('play', onPlay);
     readyVideo.addEventListener('waiting', onWaiting);
@@ -141,6 +146,7 @@ export default function Player({ stream, channelName, onNextStream, onAutoNext, 
       clearStall();
       clearStartup();
       readyVideo.removeEventListener('playing', onPlaying);
+      readyVideo.removeEventListener('pause', onPause);
       readyVideo.removeEventListener('play', onPlay);
       readyVideo.removeEventListener('waiting', onWaiting);
       readyVideo.removeEventListener('stalled', onWaiting);

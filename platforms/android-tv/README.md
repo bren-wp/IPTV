@@ -18,4 +18,4 @@ cd platforms/android-tv/android
 
 **CI artifacts:** `iptv-android-tv-debug-apk`, `iptv-android-tv-release-aab-unsigned`. Signed AAB requires a production keystore. Physical DPAD/focus, codec and Google Play TV policy tests remain mandatory.
 
-**Shared experience:** TV focus, channel discovery, EPG, playback failover and favourites use the same maintained interface as the [public IPTV website](../../docs/WEB_HOSTING.md). A working website URL does not replace device-level DPAD, codec and TV store acceptance tests.
+**Shared experience:** TV focus, channel discovery, XMLTV guide, stream failover and favorites reuse the common installed-app interface. Device-level DPAD, codec and store-acceptance tests remain necessary.
