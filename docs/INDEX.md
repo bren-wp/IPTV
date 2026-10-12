@@ -1,38 +1,26 @@
-# IPTV documentation
+# IPTV app documentation
 
-Documentation and all public product copy are written in English, with separate Croatian deployment instructions for the web domain.
+The application targets **Android, Android TV, iOS/iPadOS, Windows, Samsung Tizen and LG webOS**. Product copy and GitHub documentation are in English.
 
-## Product and visual identity
+## Product and maintenance
+- [Main README](../README.md)
+- [Brand guide](UI_BRAND_GUIDE.md)
+- [Marketing and store copy](MARKETING.md)
+- [v0.5.3 release notes](releases/v0.5.3.md)
+- [Production release and signing requirements](PRODUCTION_RELEASE.md)
+- [Playlist source review](GITHUB_SOURCES.md)
 
-- [Main product README](../README.md) — positioning, supported features, platforms, testing and downloads.
-- [Marketing kit](MARKETING.md) — accurate launch copy, website headlines and store descriptions.
-- [UI and brand guide](UI_BRAND_GUIDE.md) — colors, typography, responsive screens, remote focus, logo usage.
-- [Release notes](releases/v0.5.1.md) — current published preview distribution details.
+## Platform-specific instructions
+- [Android](../platforms/android/README.md)
+- [Android TV / Google TV](../platforms/android-tv/README.md)
+- [iPhone / iPad](../platforms/ios/README.md)
+- [Windows Setup and Portable](../platforms/windows/README.md)
+- [Samsung Tizen](../platforms/samsung-tizen/README.md)
+- [LG webOS](../platforms/lg-webos/README.md)
 
-## Distribution targets
+## Automation and accuracy
+- [App CI](../.github/workflows/player-ci.yml) — tests and six app platform builds
+- [Catalog synchronization](../.github/workflows/catalog-sync.yml) — checked external metadata with last-valid fallback
+- [Signed production packages](../.github/workflows/release-distributions.yml) — gated on publisher credentials
 
-| Target | Technical documentation | Notes |
-| --- | --- | --- |
-| Android phones/tablets | [Android](../platforms/android/README.md) | Test APK and unsigned AAB; production signing externally gated |
-| iPhone/iPad | [iOS](../platforms/ios/README.md) | Simulator output, Apple distribution IPA requires valid credentials |
-| Android TV | [Android TV](../platforms/android-tv/README.md) | Dedicated launcher/banner and DPAD |
-| Samsung TV | [Samsung Tizen](../platforms/samsung-tizen/README.md) | Staging, signed WGT requires Samsung TV certificate |
-| LG TV | [LG webOS](../platforms/lg-webos/README.md) | IPK, real-device and seller approval remain |
-| Windows 10/11 | [Windows](../platforms/windows/README.md) | Separate Setup and Portable EXEs |
-| Web | [Web](../platforms/web/README.md) | Production static build with optional hourly deployment |
-
-## Web hosting and public feeds
-
-- [WEB_HOSTING.md](WEB_HOSTING.md) — HTTPS, DNS, self-hosted ZIP, Pages, SSH auto-deploy, JSON and M3U endpoints.
-- [POSTAVLJANJE-WEB-HR.md](POSTAVLJANJE-WEB-HR.md) — hrvatske upute za `iptv.icode.com.hr`.
-- [Public Pages workflow](../.github/workflows/deploy-web.yml) — optional GitHub-hosted site and hourly catalog publishing.
-- [Self-hosted SSH workflow](../.github/workflows/deploy-shared-hosting.yml) — optional private-server deployment with restricted secrets.
-
-## Maintenance and responsibility
-
-- [Production release checklist](PRODUCTION_RELEASE.md) — signing, distribution, content rights and hardware QA.
-- [Open-source and playlist sources](GITHUB_SOURCES.md) — verified-source onboarding, compliance and fallback.
-- [CI platform builds](../.github/workflows/player-ci.yml) — typecheck, unit/browser scenarios and delivery bundles.
-- [Hourly catalog synchronization](../.github/workflows/catalog-sync.yml) — latest valid public snapshot with fallback.
-
-Public listings are not guarantees of channel uptime, playback support or rebroadcast authorization.
+No website, public web hosting workflow, browser distribution or public M3U endpoint is part of this product. The shared UI generates only installed app package assets.

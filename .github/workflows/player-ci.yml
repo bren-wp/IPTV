@@ -15,11 +15,6 @@ on:
       - '.github/workflows/player-ci.yml'
       - '.github/workflows/release-distributions.yml'
       - 'docs/releases/**'
-      - 'scripts/prepare-web-public.mjs'
-      - 'scripts/public-playlist-url.mjs'
-      - 'scripts/tests/**'
-      - 'scripts/hosting/**'
-      - '.github/workflows/deploy-web.yml'
   pull_request:
     paths:
       - 'apps/player/**'
@@ -33,11 +28,6 @@ on:
       - '.github/workflows/player-ci.yml'
       - '.github/workflows/release-distributions.yml'
       - 'docs/releases/**'
-      - 'scripts/prepare-web-public.mjs'
-      - 'scripts/public-playlist-url.mjs'
-      - 'scripts/tests/**'
-      - 'scripts/hosting/**'
-      - '.github/workflows/deploy-web.yml'
   workflow_dispatch:
 
 concurrency:
@@ -48,8 +38,8 @@ permissions:
   contents: read
 
 jobs:
-  web:
-    name: Shared tests + Web/Tizen/webOS bundles
+  shared:
+    name: Shared player tests and Samsung/LG TV packages
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -68,8 +58,6 @@ jobs:
       - name: Unit tests
         working-directory: apps/player
         run: npm test
-      - name: Public playlist URL policy regression tests
-        run: node --test scripts/tests/*.test.mjs
       - name: Install Chromium for UI smoke tests
         working-directory: apps/player
         run: npx playwright install --with-deps chromium
@@ -79,29 +67,14 @@ jobs:
       - name: Build shared player
         working-directory: apps/player
         run: npm run build
-      - name: Validate public web directory endpoints
-        run: |
-          node scripts/prepare-web-public.mjs
-          test -s apps/player/dist/api/catalog.json
-          test -s apps/player/dist/api/status.json
-          test -s apps/player/dist/playlist.m3u
-          test -s apps/player/dist/api/playlist.m3u
-          test -s apps/player/dist/.htaccess
-          test -f apps/player/dist/.nojekyll
-          cmp apps/player/dist/catalog.json apps/player/dist/api/catalog.json
-          cmp apps/player/dist/playlist.m3u apps/player/dist/api/playlist.m3u
-          head -n 1 apps/player/dist/playlist.m3u | grep -qx '#EXTM3U'
-          node -e "const fs=require('node:fs');const p=JSON.parse(fs.readFileSync('apps/player/dist/api/status.json'));if(p.playlistChannelCount<1||p.playlistChannelCount>p.channelCount)process.exit(1)"
-      - name: Prepare separate web and Smart TV bundles
-        run: node scripts/prepare-platform.mjs web samsung-tizen lg-webos
+      - name: Prepare Smart TV packages
+        run: node scripts/prepare-platform.mjs samsung-tizen lg-webos
       - name: Generate platform icons
         run: |
-          node scripts/generate-app-icons.mjs web
           node scripts/generate-app-icons.mjs samsung-tizen
           node scripts/generate-app-icons.mjs lg-webos
       - name: Validate release assets
         run: |
-          node scripts/verify-release-assets.mjs web
           node scripts/verify-release-assets.mjs samsung-tizen
           node scripts/verify-release-assets.mjs lg-webos
       - name: Package LG webOS IPK
@@ -113,18 +86,11 @@ jobs:
           test -n "$(find platforms/lg-webos/outputs -name '*.ipk' -size +0c -print -quit)"
       - name: Verify static distribution structure
         run: |
-          test -s platforms/web/dist/index.html
           test -s platforms/samsung-tizen/staging/index.html
           test -s platforms/samsung-tizen/staging/config.xml
           test -s platforms/lg-webos/staging/index.html
           test -s platforms/lg-webos/staging/appinfo.json
           python3 -c 'import json,xml.etree.ElementTree as ET; a=json.load(open("platforms/lg-webos/staging/appinfo.json")); assert a["type"]=="web" and a["main"]=="index.html"; root=ET.parse("platforms/samsung-tizen/staging/config.xml").getroot(); assert root.tag.endswith("widget")'
-      - uses: actions/upload-artifact@v4
-        with:
-          name: iptv-web
-          path: platforms/web/dist/
-          include-hidden-files: true
-          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
           name: iptv-samsung-tizen-staging
@@ -139,7 +105,7 @@ jobs:
   android:
     name: Android mobile debug APK
     runs-on: ubuntu-latest
-    needs: web
+    needs: shared
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -190,7 +156,7 @@ jobs:
   android_tv:
     name: Android TV debug APK
     runs-on: ubuntu-latest
-    needs: web
+    needs: shared
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -243,7 +209,7 @@ jobs:
   ios:
     name: iOS Simulator app (unsigned)
     runs-on: macos-15
-    needs: web
+    needs: shared
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -276,7 +242,7 @@ jobs:
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build-ios \
-            MARKETING_VERSION=0.5.2 CURRENT_PROJECT_VERSION=7 CODE_SIGNING_ALLOWED=NO build
+            MARKETING_VERSION=0.5.3 CURRENT_PROJECT_VERSION=8 CODE_SIGNING_ALLOWED=NO build
       - uses: actions/upload-artifact@v4
         with:
           name: iptv-ios-simulator-app
@@ -285,7 +251,7 @@ jobs:
 
   windows:
     name: Windows Setup + Portable EXE and launch smoke
-    needs: web
+    needs: shared
     runs-on: windows-latest
     timeout-minutes: 35
     steps:
@@ -320,8 +286,8 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $setup = 'platforms/windows/outputs/IPTV-Setup-0.5.2.exe'
-          $portable = 'platforms/windows/outputs/IPTV-Portable-0.5.2.exe'
+          $setup = 'platforms/windows/outputs/IPTV-Setup-0.5.3.exe'
+          $portable = 'platforms/windows/outputs/IPTV-Portable-0.5.3.exe'
           foreach ($file in @($setup, $portable)) {
             if (!(Test-Path $file) -or (Get-Item $file).Length -lt 10000000) {
               throw "Missing or unexpectedly small Windows EXE: $file"
@@ -342,21 +308,21 @@ jobs:
         with:
           name: iptv-windows-setup-and-portable
           path: |
-            platforms/windows/outputs/IPTV-Setup-0.5.2.exe
-            platforms/windows/outputs/IPTV-Portable-0.5.2.exe
+            platforms/windows/outputs/IPTV-Setup-0.5.3.exe
+            platforms/windows/outputs/IPTV-Portable-0.5.3.exe
           if-no-files-found: error
 
   publish_preview:
-    name: Publish v0.5.2 GitHub Preview Release
+    name: Publish v0.5.3 GitHub Preview Release
     if: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
-    needs: [web, android, android_tv, ios, windows]
+    needs: [shared, android, android_tv, ios, windows]
     runs-on: ubuntu-latest
     timeout-minutes: 12
     permissions:
       contents: write
       actions: read
     concurrency:
-      group: iptv-v0.5.2-preview-release
+      group: iptv-v0.5.3-preview-release
       cancel-in-progress: false
     steps:
       - name: Check out the tested source revision
@@ -367,13 +333,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v0.5.2 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            existing_count="$(gh release view v0.5.2 --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets | length')"
-            if [ "$existing_count" -ne 11 ]; then
-              echo "::error::Version v0.5.2 exists but has $existing_count assets, not 11. Manual review required."
+          if gh release view v0.5.3 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            existing_count="$(gh release view v0.5.3 --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets | length')"
+            if [ "$existing_count" -ne 10 ]; then
+              echo "::error::Version v0.5.3 exists but has $existing_count assets, not 11. Manual review required."
               exit 1
             fi
-            echo "Release v0.5.2 already contains all eleven files. Skipping duplicate upload."
+            echo "Release v0.5.3 already contains all ten files. Skipping duplicate upload."
             echo "present=true" >> "$GITHUB_OUTPUT"
           else
             echo "present=false" >> "$GITHUB_OUTPUT"
@@ -391,7 +357,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p release
-          for item in iptv-web iptv-samsung-tizen-staging iptv-lg-webos-ipk \
+          for item in iptv-samsung-tizen-staging iptv-lg-webos-ipk \
                       iptv-android-debug-apk iptv-android-release-aab-unsigned \
                       iptv-android-tv-debug-apk iptv-android-tv-release-aab-unsigned \
                       iptv-ios-simulator-app iptv-windows-setup-and-portable; do
@@ -408,23 +374,21 @@ jobs:
             test -s "${files[0]}"
             cp "${files[0]}" "release/$target"
           }
-          copy_one iptv-android-debug-apk apk IPTV-v0.5.2-Android-debug.apk
-          copy_one iptv-android-release-aab-unsigned aab IPTV-v0.5.2-Android-release-UNSIGNED.aab
-          copy_one iptv-android-tv-debug-apk apk IPTV-v0.5.2-AndroidTV-debug.apk
-          copy_one iptv-android-tv-release-aab-unsigned aab IPTV-v0.5.2-AndroidTV-release-UNSIGNED.aab
-          copy_one iptv-lg-webos-ipk ipk IPTV-v0.5.2-LG-webOS.ipk
-          for exe in IPTV-Setup-0.5.2.exe IPTV-Portable-0.5.2.exe; do
+          copy_one iptv-android-debug-apk apk IPTV-v0.5.3-Android-debug.apk
+          copy_one iptv-android-release-aab-unsigned aab IPTV-v0.5.3-Android-release-UNSIGNED.aab
+          copy_one iptv-android-tv-debug-apk apk IPTV-v0.5.3-AndroidTV-debug.apk
+          copy_one iptv-android-tv-release-aab-unsigned aab IPTV-v0.5.3-AndroidTV-release-UNSIGNED.aab
+          copy_one iptv-lg-webos-ipk ipk IPTV-v0.5.3-LG-webOS.ipk
+          for exe in IPTV-Setup-0.5.3.exe IPTV-Portable-0.5.3.exe; do
             test -s "artifacts/iptv-windows-setup-and-portable/$exe" || {
               echo "::error::Missing Windows release executable $exe"
               exit 1
             }
             cp "artifacts/iptv-windows-setup-and-portable/$exe" "release/$exe"
           done
-          test -s artifacts/iptv-web/index.html
           test -s artifacts/iptv-samsung-tizen-staging/config.xml
           test -n "$(find artifacts/iptv-ios-simulator-app -type f -name Info.plist -print -quit)"
-          (cd artifacts/iptv-web && zip -qr "$GITHUB_WORKSPACE/release/IPTV-v0.5.2-Web.zip" .)
-          (cd artifacts/iptv-samsung-tizen-staging && zip -qr "$GITHUB_WORKSPACE/release/IPTV-v0.5.2-Samsung-Tizen-STAGING.zip" .)
+          (cd artifacts/iptv-samsung-tizen-staging && zip -qr "$GITHUB_WORKSPACE/release/IPTV-v0.5.3-Samsung-Tizen-STAGING.zip" .)
           mkdir -p ios-simulator-package
           if [ -d artifacts/iptv-ios-simulator-app/App.app ]; then
             cp -a artifacts/iptv-ios-simulator-app/App.app ios-simulator-package/
@@ -433,29 +397,29 @@ jobs:
             cp -a artifacts/iptv-ios-simulator-app/. ios-simulator-package/App.app/
           fi
           test -s ios-simulator-package/App.app/Info.plist
-          (cd ios-simulator-package && zip -qr "$GITHUB_WORKSPACE/release/IPTV-v0.5.2-iOS-Simulator-UNSIGNED.zip" App.app)
+          (cd ios-simulator-package && zip -qr "$GITHUB_WORKSPACE/release/IPTV-v0.5.3-iOS-Simulator-UNSIGNED.zip" App.app)
           test "$(find release -maxdepth 1 -type f -name '*.exe' | wc -l)" -eq 2
           for archive in release/*.apk release/*.aab release/*.zip; do
             unzip -tq "$archive" >/dev/null
           done
-          (cd release && sha256sum IPTV-v0.5.2-* IPTV-Setup-0.5.2.exe IPTV-Portable-0.5.2.exe > SHA256SUMS.txt)
-          test "$(wc -l < release/SHA256SUMS.txt)" -eq 10
-          test "$(find release -maxdepth 1 -type f | wc -l)" -eq 11
+          (cd release && sha256sum IPTV-v0.5.3-* IPTV-Setup-0.5.3.exe IPTV-Portable-0.5.3.exe > SHA256SUMS.txt)
+          test "$(wc -l < release/SHA256SUMS.txt)" -eq 9
+          test "$(find release -maxdepth 1 -type f | wc -l)" -eq 10
           ls -lh release/
-      - name: Publish the verified preview release with ten platform assets and checksums
+      - name: Publish the verified preview release with nine platform assets and checksums
         if: steps.existing.outputs.present == 'false'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          gh release create v0.5.2 release/* \
+          gh release create v0.5.3 release/* \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
-            --title "IPTV v0.5.2 — Cross-platform Preview" \
-            --notes-file docs/releases/v0.5.2.md \
+            --title "IPTV v0.5.3 — Cross-platform Preview" \
+            --notes-file docs/releases/v0.5.3.md \
             --prerelease
-          echo "Published https://github.com/$GITHUB_REPOSITORY/releases/tag/v0.5.2"
+          echo "Published https://github.com/$GITHUB_REPOSITORY/releases/tag/v0.5.3"
       - name: Verify GitHub release assets
         if: steps.existing.outputs.present == 'false'
         shell: bash
@@ -463,7 +427,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          gh release view v0.5.2 --repo "$GITHUB_REPOSITORY" --json tagName,isPrerelease,assets \
+          gh release view v0.5.3 --repo "$GITHUB_REPOSITORY" --json tagName,isPrerelease,assets \
             --jq '{tag:.tagName,prerelease:.isPrerelease,asset_names:[.assets[].name]}'
-          count="$(gh release view v0.5.2 --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets | length')"
-          test "$count" -eq 11 || { echo "::error::Expected eleven release assets, received $count"; exit 1; }
+          count="$(gh release view v0.5.3 --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets | length')"
+          test "$count" -eq 10 || { echo "::error::Expected ten release assets, received $count"; exit 1; }

@@ -7,7 +7,7 @@
 
 ## The product in one paragraph
 
-IPTV brings live channel discovery into a calm, premium viewing experience. Browse television channels by country or category, search instantly, mark your favorites, and open available programme guides. Watch across phones, tablets, connected TVs, Windows and the web with familiar controls and one cohesive design.
+IPTV brings live channel discovery into a calm, premium viewing experience. Browse television channels by country or category, search instantly, mark your favorites, and open available programme guides. Watch across phones, tablets, connected TVs and Windows with familiar controls and one cohesive design.
 
 ## Key messages
 
@@ -29,23 +29,7 @@ IPTV brings live channel discovery into a calm, premium viewing experience. Brow
 - XMLTV schedules when available and accessible
 - Favorites, recent channels and region preferences retained locally
 - Periodic catalogue refresh and last-valid directory fallback
-- Public read-only JSON and M3U endpoints for self-hosted and Pages deployments
-- Website channel sharing through `?channel=<channel-id>`
-- Android, Android TV, Apple iOS Simulator, Windows, Samsung Tizen, LG webOS and web build targets
-
-## Website hero copy
-
-**Eyebrow:** YOUR LIVE TV, SIMPLIFIED
-
-**Headline:** One App. Every Screen.
-
-**Description:** Discover live TV channels, create your favorites, and explore what’s on — in one beautifully organized experience.
-
-**Primary CTA:** Explore Live TV
-
-**Secondary CTA:** Browse Channels
-
-**Trust line:** Available on web, Windows, mobile and supported TV platforms. Availability varies by device and provider.
+- Android, Android TV, Apple iOS Simulator, Windows, Samsung Tizen and LG webOS app targets
 
 ## Short store/listing description
 
@@ -55,7 +39,7 @@ Your live TV, beautifully organized. Discover channels around the world, explore
 
 Meet IPTV — a beautifully designed way to explore live television on the screens you love. Find channels by name, country or category. Build your own favorite channel collection. Discover current and upcoming programmes when guide data is available. Choose among supported stream sources, with intelligent recovery when a provider becomes unavailable.
 
-IPTV puts discovery and viewing controls in one consistent experience for the web, Windows, mobile and compatible TV platforms. Favorites and basic preferences are stored locally, and channel listings refresh regularly.
+IPTV puts discovery and viewing controls in one consistent experience for Windows, mobile and compatible TV platforms. Favorites and basic preferences are stored locally, and channel listings refresh regularly.
 
 IPTV is a player and directory. It does not supply paid-TV credentials or host television broadcasts. Video quality, availability, geographical access, guide data and playback compatibility depend on the original providers.
 

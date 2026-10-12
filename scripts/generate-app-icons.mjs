@@ -5,9 +5,9 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const target = process.argv[2];
-const allowed = new Set(['web', 'ios', 'android', 'android-tv', 'lg-webos', 'samsung-tizen', 'windows']);
+const allowed = new Set(['ios', 'android', 'android-tv', 'lg-webos', 'samsung-tizen', 'windows']);
 if (!allowed.has(target)) {
-  console.error('Usage: node scripts/generate-app-icons.mjs [web|ios|android|android-tv|lg-webos|samsung-tizen|windows]');
+  console.error('Usage: node scripts/generate-app-icons.mjs [ios|android|android-tv|lg-webos|samsung-tizen|windows]');
   process.exit(2);
 }
 
@@ -86,8 +86,7 @@ if (target === 'lg-webos') {
   await put(join(dir, 'store-icon.png'), 400);
 } else if (target === 'samsung-tizen') {
   await put(join(root, 'platforms/samsung-tizen/staging/icon.png'), 117);
-} else if (target === 'web') {
-  await put(join(root, 'platforms/web/dist/icon.png'), 192);
+}
 } else if (target === 'windows') {
   const dir = join(root, 'platforms/windows/assets');
   await put(join(dir, 'icon.png'), 256);

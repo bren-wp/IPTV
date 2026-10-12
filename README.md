@@ -1,222 +1,56 @@
 <div align="center">
-
 <img src="apps/player/public/brand-logo.svg" alt="IPTV" width="300" />
 
-# One App. Every Screen.
-### Live TV, beautifully organized.
+# IPTV — One App. Every Screen.
+**Premium live-TV discovery and playback for Android, Android TV, iPhone/iPad, Windows and Smart TVs.**
 
-**Live channels · Worldwide discovery · TV guide · Personal favorites**
+[![Platform CI](https://github.com/bren-wp/IPTV/actions/workflows/player-ci.yml/badge.svg)](https://github.com/bren-wp/IPTV/actions/workflows/player-ci.yml)
+[![Catalog sync](https://github.com/bren-wp/IPTV/actions/workflows/catalog-sync.yml/badge.svg)](https://github.com/bren-wp/IPTV/actions/workflows/catalog-sync.yml)
 
-[![Platform builds](https://github.com/bren-wp/IPTV/actions/workflows/player-ci.yml/badge.svg)](https://github.com/bren-wp/IPTV/actions/workflows/player-ci.yml)
-[![Catalog updates](https://github.com/bren-wp/IPTV/actions/workflows/catalog-sync.yml/badge.svg)](https://github.com/bren-wp/IPTV/actions/workflows/catalog-sync.yml)
-
-**Android · iOS · Android TV · Samsung Smart TV · LG Smart TV · Web · Windows**
-
-[**Latest preview release**](https://github.com/bren-wp/IPTV/releases/latest) ·
-[**Publish website**](docs/WEB_HOSTING.md) ·
-[**Marketing kit**](docs/MARKETING.md) ·
-[**Developer documentation**](docs/INDEX.md)
-
+[Latest app release](https://github.com/bren-wp/IPTV/releases/latest) · [Platform documentation](docs/INDEX.md) · [Production checklist](docs/PRODUCTION_RELEASE.md)
 </div>
 
----
+## Features
+- Browse verified catalogue metadata with authentic channel names from the upstream directory, country and category filters, search and locally stored favorites.
+- Play third-party live streams with bounded startup and stall detection, HLS recovery and alternative stream selection when available.
+- Read original XMLTV programme titles and times from published guide sources. If metadata is unavailable, the app indicates this rather than inventing programme listings.
+- Use the same premium dark navy / electric-blue design with mobile navigation, accessible controls and TV remote focus.
+- Refresh catalogue metadata automatically and reuse the last verified snapshot on network failure. Preferences are kept on the device.
 
-## Television, simplified
+**This project does not publish a website or provide a public JSON/M3U API.** The React/Vite player under `apps/player` is an **internal packaging component** for the installed applications, including those using web technologies inside an app container. It is not a browser product or hosting deliverable.
 
-Discover publicly accessible live-TV channels in one beautifully organized interface. Search across countries and categories, switch between available broadcasts, and keep the channels you love close.
+## Platforms and preview downloads
 
-Designed for a wide range of screens — from your phone and laptop to your living-room TV. Shared code, consistent navigation and one refined interface.
-
-**Find your channels. Save your favorites. Keep watching.** IPTV is a streaming player and directory: it does not sell television subscriptions or host broadcaster video.
-
-### Highlights
-
-| Discover | Watch | Personalize |
+| Target | Source directory | Build / distribution |
 | --- | --- | --- |
-| Explore channels across countries and genres | Live HLS video with source selection | Build your favorites collection |
-| Search instantly by channel name | View programme schedules when available | Keep preferences on your device |
-| Filter by region and category | Navigate with touch, keyboard or remote focus | Refresh the channel directory automatically |
+| Android phones and tablets | [Android](platforms/android/) | Debug APK; unsigned release AAB until the publisher signing workflow runs |
+| Android TV / Google TV | [Android TV](platforms/android-tv/) | TV launcher/remote; debug APK, unsigned AAB |
+| iPhone / iPad | [iOS](platforms/ios/) | iOS Simulator app; signed IPA gated on Apple identity, provisioning and device QA |
+| Windows 10/11 | [Windows](platforms/windows/) | Setup EXE and Portable EXE; unsigned pending Authenticode |
+| Samsung Tizen | [Samsung TV](platforms/samsung-tizen/) | Validated TV staging; signed WGT requires publisher certificate and Tizen SDK |
+| LG webOS | [LG TV](platforms/lg-webos/) | IPK; compatible-hardware smoke and seller approval still required |
 
-### Designed for every screen
+See the [GitHub releases](https://github.com/bren-wp/IPTV/releases) for actual versioned files. A passing build is not evidence of store approval or uninterrupted third-party playback.
 
-The same premium blue-on-navy design now powers all seven platform targets. It includes a cinematic Home screen, accessible channel cards, category navigation, on-demand TV guide, a responsive mobile tab bar and TV remote/keyboard focus states.
+## Architecture and testing
 
-![IPTV brand icon](apps/player/public/brand-symbol.svg)
-
-The channel tiles reflect actual live streams and their metadata. Movies and Series identify television-channel categories, not a fictitious on-demand movie library. The [design system](docs/UI_BRAND_GUIDE.md) documents color tokens, navigation, focus styles and remaining device-level QA.
-
-### Thoughtful by design
-
-- **Beautiful dark interface.** Spacious cards, clean typography, accessible controls and adaptive layouts.
-- **Live, not stale.** Hourly scheduled directory synchronization, in-app checks about every 15 minutes, and refresh on reconnect or window focus. When the main directory API is down, the app checks the verified GitHub snapshot before using the bundled catalog; a validated device-local copy is retained for offline startup.
-- **Your channels, your way.** Store favorites locally without account creation.
-- **More context.** Optional programme guide with *on now* and *up next* information.
-- **Verified public playlists.** The exported HTTPS HLS list filters local-network addresses, injected line breaks, credentials and unsafe URLs before publication.
-- **Resilient by default.** Multiple stream choices where available, bounded HLS recovery, automatic source switching on failure, URL validation and cached directory fallback.
-- **Privacy-minded.** No built-in advertising SDK or analytics tracking.
-
-## Website-ready: IPTV on your own domain
-
-Upload a production website ZIP directly to the document root of a subdomain such as `iptv.icode.com.hr`. The same web files work on Apache/cPanel, DirectAdmin, generic HTTPS hosting or GitHub Pages, with no PHP and no database.
-
-| Public path | What it contains |
-| --- | --- |
-| `/` | Full responsive app |
-| `/?channel=CHANNEL_ID` | Shareable link to a listed channel |
-| `/catalog.json`, `/api/catalog.json` | Read-only verified JSON directory |
-| `/playlist.m3u`, `/api/playlist.m3u` | Public HTTPS HLS channel-link index |
-| `/api/status.json` | Snapshot age, channel count and exportable-playlist count |
-
-The in-app directory refreshes periodically and retains a last-valid local snapshot. **For your hosted public M3U/JSON files to update automatically, configure hourly redeployment**, either through [GitHub Pages](.github/workflows/deploy-web.yml) or [protected SSH hosting deployment](.github/workflows/deploy-shared-hosting.yml). A one-time ZIP upload is a static snapshot.
-
-[**English hosting, HTTPS and DNS guide →**](docs/WEB_HOSTING.md) · [**Hrvatske upute za postavljanje →**](docs/POSTAVLJANJE-WEB-HR.md)
-
-## Public web application
-
-The responsive player is ready to deploy as a real HTTPS website through the [GitHub Pages workflow](.github/workflows/deploy-web.yml). The default GitHub Pages URL, **once Pages is enabled**, is `https://bren-wp.github.io/IPTV/`; a custom address such as `https://iptv.icode.com.hr/` requires verified domain ownership, DNS and HTTPS configuration.
-
-The public website also publishes read-only channel metadata at `/catalog.json`, `/api/catalog.json`, `/playlist.m3u`, `/api/playlist.m3u` and `/api/status.json`. It checks for refreshed snapshots hourly after the catalog synchronization. Refer to the [public hosting and DNS instructions](docs/WEB_HOSTING.md) for setup, verification, cache behavior and rights considerations.
-
-## Platforms
-
-Each delivery target has a dedicated directory with its own configuration and packaging workflow. The playback interface and channel logic are shared to keep behavior consistent.
-
-| Platform | Directory | Delivery status |
-| --- | --- | --- |
-| Android mobile | [`platforms/android/`](platforms/android/) | Debug APK and unsigned release AAB CI; signed production AAB gated on credentials |
-| iPhone & iPad | [`platforms/ios/`](platforms/ios/) | iOS Simulator CI and gated signed IPA workflow; Apple credentials and device QA required |
-| Android TV / Google TV | [`platforms/android-tv/`](platforms/android-tv/) | Leanback APK and unsigned AAB CI; signed bundle and TV QA required |
-| Samsung Tizen | [`platforms/samsung-tizen/`](platforms/samsung-tizen/) | Dedicated TV web bundle and manifest; signed WGT pending |
-| LG webOS | [`platforms/lg-webos/`](platforms/lg-webos/) | Separate packageable IPK CI with platform icon assets; device/store QA pending |
-| Web | [`platforms/web/`](platforms/web/) | Production static bundle built in CI |
-| Windows 10/11 | [`platforms/windows/`](platforms/windows/) | Separate Setup EXE and Portable EXE builds, with actual portable launch smoke tests |
-
-> **Development status:** The web interface, Android debug APK and unsigned iOS simulator builds are compiled in CI. Platform signing, Smart TV certification, real-device quality assurance and content-rights review are not complete. A successful build is not a guarantee that a remote channel will play.
-
-## Project structure
-
-```text
-IPTV/
-├── apps/
-│   └── player/             Shared React + TypeScript player, EPG and directory
-├── platforms/
-│   ├── android/            Android app, Capacitor configuration
-│   ├── ios/                iPhone/iPad app, Capacitor configuration
-│   ├── android-tv/         Android TV app and Leanback integration
-│   ├── samsung-tizen/      Samsung TV web bundle and Tizen manifest
-│   ├── lg-webos/           LG TV web bundle and webOS app metadata
-│   ├── web/                Independent browser build
-│   └── windows/            Secure desktop app + Setup/Portable EXE
-├── scripts/                Platform bundling and Android TV configuration
-└── .github/workflows/      Platform CI and scheduled directory updates
-```
-
-Every target can be prepared independently. Platform bundles are **derived from tested shared sources**, not six divergent copies of the same UI.
-
-## Develop
-
-Requirements: Node.js **22+**, plus the platform SDK for the relevant target.
+All six delivery targets reuse the shared player. There is **no independently hosted website**. `apps/player/dist` is generated temporarily by the build and copied inside app packages.
 
 ```bash
-cd apps/player
-npm install
-npm run typecheck
-npm test
-npm run build
+npm install --prefix apps/player --no-audit --no-fund
+npm --prefix apps/player run typecheck
+npm --prefix apps/player test
+npm --prefix apps/player run test:e2e
+npm --prefix apps/player run build
+node scripts/prepare-platform.mjs android android-tv ios windows samsung-tizen lg-webos
 ```
 
-Preview locally:
+The platform CI checks type safety, unit/E2E behavior, Android APK/AAB, Android TV, iOS Simulator, Windows Setup/Portable launch, TV staging and LG IPK packaging. Production signing requires protected publisher secrets; they must never be committed.
 
-```bash
-cd apps/player
-npm run dev
-```
+## Privacy, accuracy and reliability
 
-Prepare the separate platform bundles (run after the shared web build):
+Local favorites, settings and recent channels need no account. The app fetches third-party channel metadata, artwork, guide data and media; providers can observe network requests and may restrict access. No application-side proxy circumvents CORS, DRM, geoblocking or authorisation.
 
-```bash
-node scripts/prepare-platform.mjs web android ios android-tv lg-webos samsung-tizen windows
-```
+**Real source names, not invented TV programmes:** channel names and XMLTV titles come from external published catalogues; schedules can be missing or wrong upstream. No guarantee that every source is online, permitted for redistribution, or compatible with every device. Verify rights and playback on physical hardware before retail release.
 
-### Mobile and Android TV builds
-
-For Android:
-
-```bash
-cd platforms/android
-npm install
-npx cap add android
-npx cap sync android
-cd android
-./gradlew assembleDebug
-```
-
-For iOS, follow the same workflow in `platforms/ios/`, using `npx cap add ios` / `npx cap sync ios`, then build with Xcode on macOS. Device installation and App Store submission require Apple signing.
-
-For Android TV, use `platforms/android-tv/`, then run `node ../../scripts/patch-android-tv.mjs` after `npx cap add android`, before Gradle compilation.
-
-### Windows desktop
-
-The dedicated [Windows directory](platforms/windows/) produces a standard Setup EXE and a Portable EXE using the same player UI. Its Electron renderer is sandboxed, keeps Chromium web security enabled, and does not expose Node.js APIs to streamed pages.
-
-```bash
-cd apps/player && npm install && npm run build && cd ../..
-node scripts/prepare-platform.mjs windows
-node scripts/generate-app-icons.mjs windows
-node scripts/verify-release-assets.mjs windows
-npm install --prefix platforms/windows
-npm --prefix platforms/windows run build:win
-```
-
-Windows installation and portable launch are checked by GitHub Actions. These binaries are unsigned evaluation builds until Authenticode signing and real-device review are completed.
-
-### Smart TV and web builds
-
-The platform bundler prepares `platforms/samsung-tizen/staging/`, `platforms/lg-webos/staging/` and `platforms/web/dist/`. Samsung `.wgt` packaging requires Tizen Studio and a valid Samsung certificate. LG `.ipk` packaging is automated in CI with the current webOS CLI and mandatory icon assets; TV Seller Lounge acceptance and physical-device QA remain pending.
-
-## Automatic catalog updates
-
-Channel metadata is checked in-app around every 15 minutes while online and visible, plus immediately after the app regains focus or connectivity when a refresh is due. The directory snapshot is synchronized on the GitHub default branch every hour (subject to GitHub's scheduler delays). Last known good data is retained across sessions; external links may still be unavailable. The update job validates the generated directory and avoids committing identical output. The last valid snapshot is retained if the upstream service fails. When network API calls fail, the app also attempts the latest validated read-only snapshot from this repository's hourly job before reverting to its installed copy. This is a best-effort fallback, not a guarantee of uptime. Video is played directly from the third-party providers; this repository does not host or rebroadcast TV streams.
-
-**Note:** Schedules and streams depend on the broadcaster. Some channels may be unavailable, restricted geographically, DRM-protected or incompatible with particular devices.
-
-## GitHub releases
-
-**[IPTV v0.5.1 — Preview downloads](https://github.com/bren-wp/IPTV/releases/tag/v0.5.1)**
-
-The release pipeline publishes downloadable **Android and Android TV debug APKs**, **unsigned AABs**, **LG webOS IPK**, **iOS Simulator ZIP**, **Samsung Tizen staging ZIP**, **Web ZIP**, **Windows Setup/Portable EXEs** and SHA-256 checksums, but only after every platform CI job succeeds on the `main` branch. Check the release page for actual availability.
-
-These preview binaries are not certified, production-signed app-store submissions. See [v0.5.1 release notes](docs/releases/v0.5.1.md) and the [production release checklist](docs/PRODUCTION_RELEASE.md).
-
-## Downloads and development builds
-
-Open [**GitHub Actions → Player CI**](https://github.com/bren-wp/IPTV/actions/workflows/player-ci.yml) to find the artifacts produced by successful builds. Debug APKs are for testing; iOS Simulator artifacts are not signed IPA files.
-
-## Marketing and brand assets
-
-The IPTV visual system uses deep navy surfaces, electric-blue accents, a consistent TV/play icon and responsive focus states. [Brand and product marketing copy](docs/MARKETING.md) includes accurate store-listing text, feature messaging and website headlines. The [design system](docs/UI_BRAND_GUIDE.md) provides UI patterns and color tokens.
-
-All screenshots advertised as real must come from a tested application build. The repository does not present concept artwork as live screenshots or imply approval by a broadcaster or app store.
-
-## Production distribution
-
-The [signed production workflow](.github/workflows/release-distributions.yml) supports Android/Android TV signed AABs and iOS signed IPA export when the required encrypted GitHub Environment credentials have been configured. Debug and unsigned outputs are **not** Play Store or App Store releases.
-
-Before shipping publicly, complete the [Production release checklist](docs/PRODUCTION_RELEASE.md). Release blockers include platform signing certificates, broadcaster distribution rights, Samsung TV certificates, store assets and real-device playback/remote testing. The CI pipeline deliberately does not call an unverified build "production ready".
-
-## Privacy and responsible distribution
-
-- Favorites remain in local device storage; there is no user account or application telemetry.
-- Playing a channel connects the device to external stream hosts, which may receive connection metadata.
-- Publicly accessible links do **not** themselves grant redistribution, commercial exhibition or rebroadcast rights.
-- Broadcasting permissions, streaming restrictions, platform-store requirements and content rights must be verified before a public commercial release.
-
----
-
-<div align="center">
-
-**Find it. Watch it. Love it.**
-
-Made for a better live-TV experience.
-
-</div>
+[Full technical docs](docs/INDEX.md) · [License](LICENSE) · [Release notes](docs/releases/v0.5.3.md)

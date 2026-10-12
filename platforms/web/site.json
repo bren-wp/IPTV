@@ -1,8 +1,0 @@
-{
-  "name": "IPTV",
-  "type": "static-web",
-  "entry": "index.html",
-  "source": "apps/player/dist",
-  "output": "platforms/web/dist",
-  "hosting": "HTTPS static hosting; configure CDN/cache and deployment separately"
-}
