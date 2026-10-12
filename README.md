@@ -32,7 +32,7 @@ Designed for a wide range of screens, from your phone to your living-room TV.
 
 ### Designed for every screen
 
-The same premium blue-on-navy design now powers all six platform packages. It includes a cinematic Home screen, accessible channel cards, category navigation, on-demand TV guide, a responsive mobile tab bar and TV remote/keyboard focus states.
+The same premium blue-on-navy design now powers all seven platform targets. It includes a cinematic Home screen, accessible channel cards, category navigation, on-demand TV guide, a responsive mobile tab bar and TV remote/keyboard focus states.
 
 ![IPTV brand icon](apps/player/public/brand-symbol.svg)
 
@@ -46,6 +46,12 @@ The channel tiles reflect actual live streams and their metadata. Movies and Ser
 - **More context.** Optional programme guide with *on now* and *up next* information.
 - **Resilient by default.** Multiple stream choices where available, bounded HLS recovery, automatic source switching on failure, URL validation and cached directory fallback.
 - **Privacy-minded.** No built-in advertising SDK or analytics tracking.
+
+## Public web application
+
+The responsive player is ready to deploy as a real HTTPS website through the [GitHub Pages workflow](.github/workflows/deploy-web.yml). The default GitHub Pages URL, **once Pages is enabled**, is `https://bren-wp.github.io/IPTV/`; a custom address such as `https://iptv.icode.com.hr/` requires verified domain ownership, DNS and HTTPS configuration.
+
+The public website also publishes read-only channel metadata at `/catalog.json`, `/api/catalog.json` and `/api/status.json`. It checks for refreshed snapshots hourly after the catalog synchronization. Refer to the [public hosting and DNS instructions](docs/WEB_HOSTING.md) for setup, verification, cache behavior and rights considerations.
 
 ## Platforms
 
