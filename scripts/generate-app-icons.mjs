@@ -86,7 +86,6 @@ if (target === 'lg-webos') {
   await put(join(dir, 'store-icon.png'), 400);
 } else if (target === 'samsung-tizen') {
   await put(join(root, 'platforms/samsung-tizen/staging/icon.png'), 117);
-}
 } else if (target === 'windows') {
   const dir = join(root, 'platforms/windows/assets');
   await put(join(dir, 'icon.png'), 256);
