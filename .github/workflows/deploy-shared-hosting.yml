@@ -7,6 +7,8 @@ on:
       - 'apps/player/**'
       - '!apps/player/public/catalog.json'
       - 'scripts/prepare-web-public.mjs'
+      - 'scripts/public-playlist-url.mjs'
+      - 'scripts/tests/**'
       - 'scripts/hosting/**'
       - '.github/workflows/deploy-shared-hosting.yml'
   schedule:

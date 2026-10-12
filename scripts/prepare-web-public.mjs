@@ -1,5 +1,6 @@
 import { readFile, mkdir, writeFile, copyFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
+import { safePublicHlsUrl, safePublicHttpsUrl } from './public-playlist-url.mjs';
 
 const root = resolve('apps/player/dist');
 const snapshotPath = join(root, 'catalog.json');
@@ -26,17 +27,15 @@ const field = (value, max=150) => typeof value === 'string'
 const lines = ['#EXTM3U'];
 let exported = 0;
 for (const channel of snapshot.channels) {
-  const stream = channel.streams.find(s => typeof s.url === 'string' &&
-    /^https:\/\//i.test(s.url) && !s.requiresHeaders &&
-    (() => { try { return new URL(s.url).pathname.toLowerCase().endsWith('.m3u8'); }
-            catch { return false; } })());
+  const stream = channel.streams
+    .map(s => ({ url: safePublicHlsUrl(s.url), requiresHeaders: s.requiresHeaders }))
+    .find(s => s.url && !s.requiresHeaders);
   if (!stream) continue;
   const id = field(channel.id, 180);
   const name = field(channel.name || channel.id);
   if (!id || !name) continue;
   const category = field(Array.isArray(channel.categories) ? channel.categories[0] : '');
-  const logo = typeof channel.logo === 'string' && /^https:\/\//i.test(channel.logo)
-    ? field(channel.logo, 500) : '';
+  const logo = field(safePublicHttpsUrl(channel.logo), 500);
   lines.push(`#EXTINF:-1 tvg-id="${id}" tvg-name="${name}" tvg-logo="${logo}" group-title="${category}",${name}`);
   lines.push(stream.url);
   exported++;

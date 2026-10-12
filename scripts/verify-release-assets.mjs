@@ -30,7 +30,7 @@ if (target === 'lg-webos') {
   for (const key of ['id', 'title', 'main', 'icon', 'largeIcon', 'version']) {
     if (!info[key]) throw new Error('Missing webOS app metadata: ' + key);
   }
-  if (info.version !== '0.5.1') throw new Error('webOS version mismatch.');
+  if (info.version !== '0.5.2') throw new Error('webOS version mismatch.');
   await png(join(web, info.icon), 80);
   await png(join(web, info.largeIcon), 130);
 }
@@ -38,7 +38,7 @@ if (target === 'samsung-tizen') {
   const xml = await readFile(join(web, 'config.xml'), 'utf8');
   if (!xml.includes('tizen:profile name="tv-samsung"') ||
       !xml.includes('<icon src="icon.png"/>') ||
-      !xml.includes('version="0.5.1"')) throw new Error('Tizen TV metadata mismatch.');
+      !xml.includes('version="0.5.2"')) throw new Error('Tizen TV metadata mismatch.');
   await png(join(web, 'icon.png'), 117);
 }
 if (target === 'web') await png(join(web, 'icon.png'), 192);
@@ -55,7 +55,7 @@ if (target === 'windows') {
 if (target === 'ios') await png(join(base, 'ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png'), 1024);
 if (target === 'android' || target === 'android-tv') {
   const gradle = await readFile(join(base, 'android/app/build.gradle'), 'utf8');
-  if (!/versionCode\s+501/.test(gradle) || !/versionName\s+"0.5.1"/.test(gradle)) {
+  if (!/versionCode\s+502/.test(gradle) || !/versionName\s+"0.5.2"/.test(gradle)) {
     throw new Error('Android release version has not been configured.');
   }
   await png(join(base, 'android/app/src/main/res/mipmap-mdpi/ic_launcher.png'), 48);

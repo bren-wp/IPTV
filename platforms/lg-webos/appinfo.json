@@ -1,6 +1,6 @@
 {
   "id": "com.brendigo.iptv.webos",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "vendor": "Brendigo",
   "type": "web",
   "main": "index.html",

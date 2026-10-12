@@ -7,6 +7,8 @@ on:
       - 'apps/player/**'
       - '!apps/player/public/catalog.json'
       - 'scripts/prepare-web-public.mjs'
+      - 'scripts/public-playlist-url.mjs'
+      - 'scripts/tests/**'
       - 'scripts/hosting/**'
       - '.github/workflows/deploy-web.yml'
   schedule:
@@ -49,6 +51,8 @@ jobs:
         run: |
           npm run typecheck
           npm test
+      - name: Public playlist URL policy regression tests
+        run: node --test scripts/tests/*.test.mjs
       - name: Build the premium web player
         working-directory: apps/player
         run: npm run build
