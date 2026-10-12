@@ -32,7 +32,7 @@ Designed for a wide range of screens, from your phone to your living-room TV.
 
 ### Designed for every screen
 
-The same premium blue-on-navy design now powers all six platform packages. It includes a cinematic Home screen, accessible channel cards, category navigation, on-demand TV guide, a responsive mobile tab bar and TV remote/keyboard focus states.
+The same premium blue-on-navy design now powers all seven platform targets. It includes a cinematic Home screen, accessible channel cards, category navigation, on-demand TV guide, a responsive mobile tab bar and TV remote/keyboard focus states.
 
 ![IPTV brand icon](apps/player/public/brand-symbol.svg)
 
