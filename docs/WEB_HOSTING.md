@@ -1,37 +1,95 @@
-# Public web app and channel directory API
+# IPTV public website — domain, deployment and public playlists
 
-The IPTV web app is built from the same UI and playback code as Android, iOS, Windows, Android TV, Samsung Tizen and LG webOS. It can be delivered via GitHub Pages or any HTTPS static hosting provider **without a private database, custom server or PHP**.
+The premium IPTV interface is one shared cross-platform application. The same web build can be served from GitHub Pages, a regular Apache/cPanel or DirectAdmin hosting account, or any HTTPS static server. **No PHP, WordPress, custom database or streaming proxy is required.**
 
-## Public URL structure
+## Routes and downloadable feeds
 
-Once GitHub Pages is enabled, the default site address is expected to be:
+After the chosen hosting and HTTPS domain are configured, these paths become available:
 
-- `https://bren-wp.github.io/IPTV/` — full responsive web app.
-- `https://bren-wp.github.io/IPTV/catalog.json` — versioned directory snapshot.
-- `https://bren-wp.github.io/IPTV/api/catalog.json` — identical public JSON feed for integrations.
-- `https://bren-wp.github.io/IPTV/api/status.json` — last-deployed snapshot timestamp and channel count, **not** a stream availability guarantee.
+| Route | Response |
+| --- | --- |
+| `/` | Branded, responsive live-TV application |
+| `/?channel=<encoded-id>` | Direct link to a known live channel |
+| `/catalog.json` | Validated channel JSON snapshot |
+| `/api/catalog.json` | Same channel JSON snapshot for integrations |
+| `/playlist.m3u` | M3U index of listed HTTPS HLS sources not requiring custom headers |
+| `/api/playlist.m3u` | Same M3U index under the API namespace |
+| `/api/status.json` | Snapshot timestamp, generation time, number of channels and exportable streams |
 
-When the GitHub Pages custom domain is correctly configured, for example `iptv.icode.com.hr`, the equivalent app and feeds will be located at `https://iptv.icode.com.hr/`, `/catalog.json`, `/api/catalog.json` and `/api/status.json`.
+The public M3U is **generated from the last successfully verified channel snapshot**. It does not host media, provide credentials, bypass DRM or guarantee that each stream is licensed, compatible or reachable.
 
-**Do not present either URL as live before completing the GitHub Pages settings, DNS, TLS and public HTTP checks.** The example custom domain must be controlled by the publisher.
+The planned example domain is `https://iptv.icode.com.hr`. The exact hostname cannot be described as active until the owner has configured its DNS, hosting root and a valid HTTPS certificate, and the public endpoints return successful responses.
 
-## Deploy with GitHub Pages
+## Option A: Upload a ready-to-use ZIP to your own hosting
 
-1. Open the repository **Settings → Pages**, select **Source: GitHub Actions**. GitHub Pages may require owner approval/permissions for Actions deployment.
-2. Run **Actions → IPTV Public Web Deployment → Run workflow** on the `main` branch. Check that the actual deployment job succeeds.
-3. If using a custom domain, first verify domain ownership and enter the custom domain under **Settings → Pages → Custom domain**; save it before pointing DNS. When deploying from GitHub Actions, a `CNAME` file in the artifact is ignored, so domain routing must be configured in Pages settings.
-4. At your DNS provider, create a **CNAME** record: host `iptv` (for the example `iptv.icode.com.hr`), target `bren-wp.github.io`. Do not point the record at `bren-wp.github.io/IPTV` or to an invented IP address. Remove incompatible existing DNS records for that exact host.
-5. After DNS propagation and certificate issuance, enable **Enforce HTTPS** in Pages settings. GitHub notes that certificate issuance and DNS changes can take time.
-6. Confirm in a browser and via HTTP requests that the homepage and each JSON path returns status 200 and valid JSON. Test desktop, Android/iOS browsers and TV browsers, including real channel playback.
+The web ZIP contains actual production web files directly at the ZIP root: `index.html`, `assets/`, `brand-symbol.svg`, `catalog.json`, `playlist.m3u`, `api/`, `.htaccess` and `.nojekyll`.
 
-The independent workflow `.github/workflows/deploy-web.yml` rebuilds on relevant application changes and attempts another deployment every hour **after** the scheduled catalog sync. The latter's commits may not trigger other workflows when pushed using the default GitHub Actions token, so the schedule is intentional. GitHub schedules are best effort: they do not guarantee exact minute updates or third-party stream uptime.
+1. Create a subdomain named `iptv.icode.com.hr` in your hosting control panel, and note its **exact document root**.
+2. Configure DNS per your hosting provider's real instructions: an `A` record pointing to your server's assigned IP or a provider-specified CNAME. Do **not** use the GitHub Pages CNAME unless choosing Option B below.
+3. Upload the ZIP and extract its **contents, not a containing folder**, into that document root. Example: `<document-root>/index.html`, `<document-root>/assets/`, `<document-root>/api/`.
+4. Ensure all hidden files, including `.htaccess`, are extracted. Apache uses the included rules for JSON/M3U MIME types, public CORS on directory feeds and short cache lifetimes.
+5. Enable HTTPS in the hosting panel (trusted certificate for the exact subdomain). Test the homepage, links to channels, public feeds, mobile interface and several real devices.
+6. If the server is not Apache, translate the MIME/CORS/cache rules to its configuration instead of assuming that `.htaccess` works.
 
-## Other hosting providers
+The browser updates its visible channel directory regularly, but files published as static `catalog.json` and `playlist.m3u` **do not change after a manual ZIP upload**. For automatic updates, use Option C or Option B.
 
-You can publish the contents of `apps/player/dist/` or CI's web ZIP to any standard HTTPS host at its document root. Run `node scripts/prepare-web-public.mjs` after building to create the read-only `api/` endpoints. Ensure JSON MIME type `application/json`, HTTPS and short cache age for `catalog.json` and `api/*.json` (e.g. 5–15 minutes), and long immutable caching for hashed JS/CSS assets. Avoid redirecting JSON API paths to the HTML app.
+[Detailed Croatian upload instructions](POSTAVLJANJE-WEB-HR.md).
 
-GitHub Pages does not support custom per-path cache headers, so consumers should send cache-busting/no-cache requests when fresh channel metadata is required. The web app also refreshes its directory from independent public sources and maintains a validated offline cache.
+## Option B: GitHub Pages (no separate paid web host required)
 
-## Content and operational restrictions
+1. In this repository go to **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+2. Run **Actions → IPTV Public Web Deployment**, using the `main` branch.
+3. After deployment succeeds, GitHub Pages can serve the app at `https://bren-wp.github.io/IPTV/`, but confirm accessibility before announcing it.
+4. To use `iptv.icode.com.hr`, first follow GitHub's domain ownership verification. Configure the custom domain in GitHub Pages settings.
+5. Add a DNS **CNAME** named `iptv` at your `icode.com.hr` zone, targeting **`bren-wp.github.io`**. Do not append `/IPTV` to the DNS target. Remove conflicting DNS records for this exact host.
+6. After DNS propagation, enable **Enforce HTTPS**, wait for the certificate, and test the actual public URL.
 
-A public playlist directory is not a media hosting or rebroadcasting service. External stream URLs can disappear, become inaccessible, require authentication, block CORS or be restricted geographically. Only publish sources you have reviewed for lawful redistribution and relevant broadcaster rights. No attempts to circumvent DRM or access controls.
+The workflow rebuilds on relevant code changes and *attempts* to deploy a refreshed verified catalogue every hour after the catalogue synchronization. This timing is best effort: GitHub Actions scheduled workflows can be delayed. A GitHub Pages site does not use the Apache `.htaccess` settings; the platform controls HTTP headers.
+
+## Option C: Automatic refresh on your own server over SSH
+
+The workflow `.github/workflows/deploy-shared-hosting.yml` redeploys the latest verified web assets and M3U/JSON endpoints hourly after the directory sync, and on relevant code pushes. It only runs when explicitly enabled.
+
+Configure the following **GitHub repository Actions variable** (or organization variable) under **Settings → Secrets and variables → Actions → Variables**:
+
+- `IPTV_SSH_DEPLOY_ENABLED` = `true`.
+
+Then set these **encrypted Actions secrets** for the same repository:
+
+| Secret | Purpose |
+| --- | --- |
+| `IPTV_SSH_HOST` | Real host name of your SSH/SFTP provider |
+| `IPTV_SSH_USER` | Restricted SSH user with access only to the intended web root |
+| `IPTV_SSH_PRIVATE_KEY` | Private key for the dedicated deployment account |
+| `IPTV_SSH_KNOWN_HOSTS` | Independently verified host public-key line for SSH host pinning |
+| `IPTV_SSH_REMOTE_DIR` | Absolute document root ending with `/`, e.g. `/home/ACCOUNT/public_html/iptv/` |
+
+Never commit these secrets or paste private keys in chat. Provision the SSH account on your own hosting, verify its server fingerprint out-of-band and confirm its authorized destination. The workflow does **not** delete unrelated server files. If your hosting provider only supports FTP/FTPS and not SSH, this SSH workflow cannot work; use the provider's approved deployment service instead.
+
+## Local build
+
+```bash
+cd apps/player
+npm install
+npm run typecheck
+npm test
+npm run build
+cd ../..
+node scripts/prepare-web-public.mjs
+```
+
+The upload-ready output is in `apps/player/dist/`. To create a ZIP, compress the **contents** of that directory, retaining hidden files. The standalone product README and marketing copy are not required inside the public web directory.
+
+## Acceptance checklist
+
+- Homepage returns HTTP 200 and loads branded CSS/JS assets over HTTPS.
+- `catalog.json` and `api/catalog.json` return parseable JSON and contain nonempty channels.
+- `playlist.m3u` and `api/playlist.m3u` begin with `#EXTM3U` and contain actual HTTPS source lines.
+- `api/status.json` reports a valid timestamp and channel count.
+- Copying a channel link opens a known channel, while unknown IDs never cause an arbitrary stream request.
+- App navigation, favorites, TV guide states, offline directory and player fallback work on representative desktop/mobile devices.
+- Every deployed stream is reviewed for broadcaster permissions and actual platform compatibility.
+
+## Scope and limitations
+
+This is a static website. It can publish verified metadata and URLs, but cannot guarantee provider uptime, remove CORS restrictions, bypass access controls or manage user streaming credentials. Public channel lists do not by themselves grant commercial rebroadcast rights. Signed store releases, actual device QA, rights clearance, GitHub Pages permissions, DNS and certificate management remain external release steps.
