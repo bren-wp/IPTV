@@ -51,6 +51,7 @@ The channel tiles reflect actual live streams and their metadata. Movies and Ser
 - **Live, not stale.** Hourly scheduled directory synchronization, in-app checks about every 15 minutes, and refresh on reconnect or window focus. When the main directory API is down, the app checks the verified GitHub snapshot before using the bundled catalog; a validated device-local copy is retained for offline startup.
 - **Your channels, your way.** Store favorites locally without account creation.
 - **More context.** Optional programme guide with *on now* and *up next* information.
+- **Verified public playlists.** The exported HTTPS HLS list filters local-network addresses, injected line breaks, credentials and unsafe URLs before publication.
 - **Resilient by default.** Multiple stream choices where available, bounded HLS recovery, automatic source switching on failure, URL validation and cached directory fallback.
 - **Privacy-minded.** No built-in advertising SDK or analytics tracking.
 
