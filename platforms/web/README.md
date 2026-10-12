@@ -27,3 +27,5 @@ The `api/playlist.m3u` and `playlist.m3u` outputs include only HTTPS HLS entries
 **Important:** manually uploading a static ZIP does *not* refresh the ZIP's JSON/M3U files by itself. The player refreshes its on-screen channel directory independently, but the public `playlist.m3u` and `catalog.json` paths require redeployment. Set up the [hourly GitHub Pages workflow](../../.github/workflows/deploy-web.yml) or the [optional protected SSH hosting deployment](../../.github/workflows/deploy-shared-hosting.yml) for automatic public feed updates.
 
 For DNS, HTTPS, troubleshooting and a complete upload checklist, read [WEB_HOSTING.md](../../docs/WEB_HOSTING.md).
+
+**Brand and marketing:** use the established [IPTV design guide](../../docs/UI_BRAND_GUIDE.md), [marketing copy](../../docs/MARKETING.md) and [documentation index](../../docs/INDEX.md). Never claim TV stream rights, uninterrupted playback or store approvals based on the build alone.
